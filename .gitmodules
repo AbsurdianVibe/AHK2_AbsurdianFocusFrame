@@ -1,0 +1,3 @@
+[submodule "external_code"]
+	path = external_code
+	url = https://github.com/AbsurdianVibe/AHK2_external_code.git
