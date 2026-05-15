@@ -7,7 +7,7 @@
 ;@Ahk2Exe-SetVersion 1.0.0
 ;@Ahk2Exe-SetProductName Absurdian Focus Frame
 ;@Ahk2Exe-SetLanguage 0x0409 ; English (US)
-#Include "..\AHK2_external_code\UIA.ahk"
+#Include "external_code\UIA.ahk"
 Persistent()
 
 global IniPath := A_ScriptDir "\AbsurdianFocusFrame.ini"
