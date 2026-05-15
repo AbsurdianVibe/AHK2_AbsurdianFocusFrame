@@ -7,7 +7,7 @@
 ;@Ahk2Exe-SetVersion 1.0.0
 ;@Ahk2Exe-SetProductName Absurdian Focus Frame
 ;@Ahk2Exe-SetLanguage 0x0409 ; English (US)
-#Include "..\AHK2_external_code\UIA.ahk"
+#Include "external_code\UIA.ahk"
 Persistent()
 
 global IniPath := A_ScriptDir "\AbsurdianFocusFrame.ini"
@@ -42,7 +42,7 @@ if !FileExist(IniPath) {
     readme .= "; my GitHub: https://github.com/AbsurdianVibe`n"
     readme .= "; Happy clicking! ~ AbsurdianVibe`n"
     readme .= "; ============================================================================== `n`n"
-    readme .= "[Settings]`nBorderThickness=2`nTransparency=0.5`nBorderColor=fdb500`nExplorer=1`nAutostart=1`n"
+    readme .= "[Settings]`nBorderThickness=2`nTransparency=0.5`nBorderColor=fdb500`nExplorer=1`nAutostart=0`n"
     FileAppend(readme, IniPath, "UTF-8")
 }
 
