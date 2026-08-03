@@ -161,8 +161,6 @@ global FocusHook := DllCall("SetWinEventHook", "UInt", 0x8005, "UInt", 0x8005, "
 
 ; Triggered by the system on focus change (kills border visibility).
 HideNativeBorderEvent(hWinEventHook, event, hwnd, idObject, idChild, idEventThread, dwmsEventTime) {
-    if (IsConfigMode)
-        return
     if hwnd
         try PostMessage(0x0128, 0x00010001, 0, , "ahk_id " hwnd)
 
@@ -188,7 +186,7 @@ myApplyBorderRegion(g, w, h, vX, vY, vW, vH) {
 
 ; Polling watchdog clipping the border to the view (Clipping)
 RenderWatchdog() {
-    if (IsConfigMode)
+    if (IsConfigMode && !IsSupportedWindow())
         return
     static lastState := ""
     static lastHwndAbove := -1
@@ -254,6 +252,11 @@ ShowSettingsGui(*) {
 
     myGui := Gui("-MinimizeBox -MaximizeBox", "Absurdian Focus Frame - Settings")
 
+    origThick := BorderThickness
+    origTrans := Format("{:.2f}", Transparency)
+    origColor := IniRead(IniPath, "Settings", "BorderColor", "")
+    origAutostart := Autostart
+
     CleanupAndDestroy(*) {
         global IsConfigMode := false
         OnMessage(0x020A, HandleMouseWheel, 0)
@@ -265,16 +268,33 @@ ShowSettingsGui(*) {
     myGui.OnEvent("Close", CleanupAndDestroy)
 
     myGui.Add("Text", "x15 y15 w200", "Border Thickness (px):")
-    myGui.Add("Edit", "x15 y30 w100 vBorderThickness", BorderThickness)
+    myThickEdit := myGui.Add("Edit", "x15 y30 w80 vBorderThickness", BorderThickness)
     myThickUD := myGui.Add("UpDown", "Range1-20", BorderThickness)
-    myThickUD.OnEvent("Change", (ctrl, *) => myApplyBorderRegion(ctrl.Value, gLastW, gLastH, gLastVX, gLastVY, gLastVW, gLastVH))
+    myThickUD.OnEvent("Change", (ctrl, *) => (
+        myApplyBorderRegion(ctrl.Value, gLastW, gLastH, gLastVX, gLastVY, gLastVW, gLastVH),
+        CheckUndoStates()
+    ))
+    myBtnUndoThick := myGui.Add("Button", "x100 y29 w24 h24 Disabled", "↩")
+    myBtnUndoThick.OnEvent("Click", (*) => (
+        myThickEdit.Value := origThick,
+        myApplyBorderRegion(origThick, gLastW, gLastH, gLastVX, gLastVY, gLastVW, gLastVH),
+        CheckUndoStates()
+    ))
 
     myGui.Add("Text", "x15 y65 w200", "Transparency (0.0 - 1.0):")
-    myTransEdit := myGui.Add("Edit", "x15 y80 w80 vTransparency", Format("{:.2f}", Transparency))
-    myTransUD := myGui.Add("UpDown", "x95 y80 w20 h22 -16 Range0-20", Round(Transparency / 0.05))
+    myTransEdit := myGui.Add("Edit", "x15 y80 w60 vTransparency", Format("{:.2f}", Transparency))
+    myTransUD := myGui.Add("UpDown", "x75 y80 w20 h22 -16 Range0-20", Round(Transparency / 0.05))
     myTransUD.OnEvent("Change", (ctrl, *) => (
         myTransEdit.Value := Format("{:.2f}", ctrl.Value * 0.05),
-        WinSetTransparent(Round(255 * (ctrl.Value * 0.05)), FocusGui.Hwnd)
+        WinSetTransparent(Round(255 * (ctrl.Value * 0.05)), FocusGui.Hwnd),
+        CheckUndoStates()
+    ))
+    myBtnUndoTrans := myGui.Add("Button", "x100 y79 w24 h24 Disabled", "↩")
+    myBtnUndoTrans.OnEvent("Click", (*) => (
+        myTransUD.Value := Round(origTrans / 0.05),
+        myTransEdit.Value := origTrans,
+        WinSetTransparent(Round(255 * Float(origTrans)), FocusGui.Hwnd),
+        CheckUndoStates()
     ))
 
     HandleMouseWheel(wParam, lParam, msg, hwnd) {
@@ -283,34 +303,54 @@ ShowSettingsGui(*) {
             myTransUD.Value += dir
             myTransEdit.Value := Format("{:.2f}", myTransUD.Value * 0.05)
             WinSetTransparent(Round(255 * (myTransUD.Value * 0.05)), FocusGui.Hwnd)
+            CheckUndoStates()
             return 1
         }
     }
     OnMessage(0x020A, HandleMouseWheel)
 
     myGui.Add("Text", "x15 y115 w200", "Border Color (HEX, empty for auto):")
-    myColorEdit := myGui.Add("Edit", "x15 y130 w60 vBorderColor", IniRead(IniPath, "Settings", "BorderColor", ""))
-    myColorEdit.OnEvent("Change", (ctrl, *) => (FocusGui.BackColor := (ctrl.Value != "" ? ctrl.Value : myGetThemeColor())))
+    myColorEdit := myGui.Add("Edit", "x15 y130 w60 vBorderColor", origColor)
+    myColorEdit.OnEvent("Change", (ctrl, *) => (FocusGui.BackColor := (ctrl.Value != "" ? ctrl.Value : myGetThemeColor()), CheckUndoStates()))
     myBtnPicker := myGui.Add("Button", "x80 y129 w24 h24", "🎨")
     myBtnPicker.OnEvent("Click", (*) => (
         (res := myChooseColor(myColorEdit.Value != "" ? myColorEdit.Value : myGetThemeColor(), myGui.Hwnd)) != ""
-            ? (myColorEdit.Value := res, FocusGui.BackColor := res)
+            ? (myColorEdit.Value := res, FocusGui.BackColor := res, CheckUndoStates())
         : ""
     ))
     myBtnDropper := myGui.Add("Button", "x106 y129 w24 h24", "💉")
     myBtnDropper.OnEvent("Click", (*) => (
         (res := myPickColorFromScreen()) != ""
-            ? (myColorEdit.Value := res, FocusGui.BackColor := res)
-        : (FocusGui.BackColor := (myColorEdit.Value != "" ? myColorEdit.Value : myGetThemeColor()))
+            ? (myColorEdit.Value := res, FocusGui.BackColor := res, CheckUndoStates())
+        : (FocusGui.BackColor := (myColorEdit.Value != "" ? myColorEdit.Value : myGetThemeColor()), CheckUndoStates())
+    ))
+    myBtnUndoColor := myGui.Add("Button", "x132 y129 w24 h24 Disabled", "↩")
+    myBtnUndoColor.OnEvent("Click", (*) => (
+        myColorEdit.Value := origColor,
+        FocusGui.BackColor := (origColor != "" ? origColor : myGetThemeColor()),
+        CheckUndoStates()
     ))
 
-    myGui.Add("Checkbox", "x15 y170 w200 vAutostart Checked" Autostart, "Run at system startup")
+    myCbAutostart := myGui.Add("Checkbox", "x15 y170 w140 vAutostart Checked" Autostart, "Run at system startup")
+    myCbAutostart.OnEvent("Click", (*) => CheckUndoStates())
+    myBtnUndoAutostart := myGui.Add("Button", "x160 y165 w24 h24 Disabled", "↩")
+    myBtnUndoAutostart.OnEvent("Click", (*) => (
+        myCbAutostart.Value := origAutostart,
+        CheckUndoStates()
+    ))
 
     myBtnSave := myGui.Add("Button", "x15 y210 w80 Default", "Save")
     myBtnSave.OnEvent("Click", mySaveSettings)
 
     myBtnCancel := myGui.Add("Button", "x105 y210 w80", "Cancel")
     myBtnCancel.OnEvent("Click", CleanupAndDestroy)
+
+    CheckUndoStates(*) {
+        myBtnUndoThick.Enabled := (myThickUD.Value != origThick)
+        myBtnUndoTrans.Enabled := (myTransEdit.Value != origTrans)
+        myBtnUndoColor.Enabled := (myColorEdit.Value != origColor)
+        myBtnUndoAutostart.Enabled := (myCbAutostart.Value != origAutostart)
+    }
 
     myGui.Show("w240 h250")
 
