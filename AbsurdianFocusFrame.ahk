@@ -13,7 +13,7 @@ Persistent()
 global IniPath := A_ScriptDir "\AbsurdianFocusFrame.ini"
 
 A_TrayMenu.Delete()
-A_TrayMenu.Add("Settings", (*) => Run(IniPath))
+A_TrayMenu.Add("Settings", ShowSettingsGui)
 A_TrayMenu.Default := "Settings"
 A_TrayMenu.ClickCount := 1
 A_TrayMenu.Add("Restart", (*) => Reload())
@@ -28,7 +28,7 @@ if !FileExist(IniPath) {
     readme .= ";`n"
     readme .= "; SETTINGS:`n"
     readme .= "; BorderThickness - Thickness of the highlight in pixels (e.g., 2, 3, 5).`n"
-    readme .= "; Transparency    - Visibility of the border (from 0.0 to 1.0). 0.0 is solid color,`n"
+    readme .= "; Transparency    - Visibility of the border (from 0.0 to 1.0). 1.0 is solid color,`n"
     readme .= ";                   and 0.5 is semi-transparent.`n"
     readme .= "; BorderColor     - Color in HEX format (leave empty for auto-theme).`n"
     readme .= "; Autostart       - Run the program at system startup (1=Yes, 0=No).`n"
@@ -58,6 +58,8 @@ if (BorderColor == "") {
     BorderColor := myGetThemeColor()
 }
 
+global IsConfigMode := false
+
 myThemeChangeHook(wParam, lParam, msg, hwnd) {
     local targetParam := ""
     try targetParam := StrGet(lParam)
@@ -83,7 +85,7 @@ if A_IsCompiled {
 global CacheReq := UIA.CreateCacheRequest(["ControlType", "BoundingRectangle", "IsOffscreen"])
 global FocusGui := Gui("-Caption +ToolWindow +E0x20") ; +E0x20 = Ignores mouse clicks
 FocusGui.BackColor := BorderColor
-WinSetTransparent(Round(255 * (1.0 - Transparency)), FocusGui.Hwnd)
+WinSetTransparent(Round(255 * Transparency), FocusGui.Hwnd)
 
 global LastHwnd := 0
 ; Global system listener hiding native GDI focus borders.
@@ -91,6 +93,8 @@ global FocusHook := DllCall("SetWinEventHook", "UInt", 0x8005, "UInt", 0x8005, "
 
 ; Triggered by the system on focus change (kills border visibility).
 HideNativeBorderEvent(hWinEventHook, event, hwnd, idObject, idChild, idEventThread, dwmsEventTime) {
+    if (IsConfigMode)
+        return
     if hwnd
         try PostMessage(0x0128, 0x00010001, 0, , "ahk_id " hwnd)
 
@@ -100,8 +104,24 @@ HideNativeBorderEvent(hWinEventHook, event, hwnd, idObject, idChild, idEventThre
 
 IsSupportedWindow() => WinActive("ahk_class WorkerW") || WinActive("ahk_class Progman")
 
+global gLastW := 0, gLastH := 0, gLastVX := 0, gLastVY := 0, gLastVW := 0, gLastVH := 0
+myApplyBorderRegion(g, w, h, vX, vY, vW, vH) {
+    if (w <= 0 || h <= 0 || vW <= 0 || vH <= 0)
+        return
+    hRgnOuter := DllCall("CreateRectRgn", "Int", 0, "Int", 0, "Int", w, "Int", h, "Ptr")
+    hRgnInner := DllCall("CreateRectRgn", "Int", g, "Int", g, "Int", w - g, "Int", h - g, "Ptr")
+    DllCall("CombineRgn", "Ptr", hRgnOuter, "Ptr", hRgnOuter, "Ptr", hRgnInner, "Int", 4)
+    hRgnClip := DllCall("CreateRectRgn", "Int", vX, "Int", vY, "Int", vX + vW, "Int", vY + vH, "Ptr")
+    DllCall("CombineRgn", "Ptr", hRgnOuter, "Ptr", hRgnOuter, "Ptr", hRgnClip, "Int", 1)
+    DllCall("SetWindowRgn", "Ptr", FocusGui.Hwnd, "Ptr", hRgnOuter, "Int", 1)
+    DllCall("DeleteObject", "Ptr", hRgnInner)
+    DllCall("DeleteObject", "Ptr", hRgnClip)
+}
+
 ; Polling watchdog clipping the border to the view (Clipping)
 RenderWatchdog() {
+    if (IsConfigMode)
+        return
     static lastState := ""
     static lastHwndAbove := -1
     try {
@@ -136,17 +156,8 @@ RenderWatchdog() {
         if (stateChange) {
             lastState := state
 
-            g := BorderThickness
-            hRgnOuter := DllCall("CreateRectRgn", "Int", 0, "Int", 0, "Int", w, "Int", h, "Ptr")
-            hRgnInner := DllCall("CreateRectRgn", "Int", g, "Int", g, "Int", w - g, "Int", h - g, "Ptr")
-            DllCall("CombineRgn", "Ptr", hRgnOuter, "Ptr", hRgnOuter, "Ptr", hRgnInner, "Int", 4) ; RGN_DIFF
-
-            hRgnClip := DllCall("CreateRectRgn", "Int", vX, "Int", vY, "Int", vX + vW, "Int", vY + vH, "Ptr")
-            DllCall("CombineRgn", "Ptr", hRgnOuter, "Ptr", hRgnOuter, "Ptr", hRgnClip, "Int", 1) ; RGN_AND
-
-            DllCall("SetWindowRgn", "Ptr", FocusGui.Hwnd, "Ptr", hRgnOuter, "Int", 1)
-            DllCall("DeleteObject", "Ptr", hRgnInner)
-            DllCall("DeleteObject", "Ptr", hRgnClip)
+            global gLastW := w, gLastH := h, gLastVX := vX, gLastVY := vY, gLastVW := vW, gLastVH := vH
+            myApplyBorderRegion(BorderThickness, w, h, vX, vY, vW, vH)
 
             FocusGui.Show("NA x" rect.l " y" rect.t " w" w " h" h)
         }
@@ -162,5 +173,74 @@ RenderWatchdog() {
         lastState := ""
         lastHwndAbove := -1
         SetTimer(RenderWatchdog, 0)
+    }
+}
+
+ShowSettingsGui(*) {
+    try {
+        if hwnd := WinExist("ahk_class WorkerW") || WinExist("ahk_class Progman")
+            WinActivate("ahk_id " hwnd)
+        Sleep(100)
+    }
+    global IsConfigMode := true
+
+    myGui := Gui("-MinimizeBox -MaximizeBox", "Absurdian Focus Frame - Settings")
+
+    CleanupAndDestroy(*) {
+        global IsConfigMode := false
+        OnMessage(0x020A, HandleMouseWheel, 0)
+        FocusGui.BackColor := (BorderColor == "" ? myGetThemeColor() : BorderColor)
+        WinSetTransparent(Round(255 * Transparency), FocusGui.Hwnd)
+        myApplyBorderRegion(BorderThickness, gLastW, gLastH, gLastVX, gLastVY, gLastVW, gLastVH)
+        myGui.Destroy()
+    }
+    myGui.OnEvent("Close", CleanupAndDestroy)
+
+    myGui.Add("Text", "x15 y15 w200", "Border Thickness (px):")
+    myGui.Add("Edit", "x15 y30 w100 vBorderThickness", BorderThickness)
+    myThickUD := myGui.Add("UpDown", "Range1-20", BorderThickness)
+    myThickUD.OnEvent("Change", (ctrl, *) => myApplyBorderRegion(ctrl.Value, gLastW, gLastH, gLastVX, gLastVY, gLastVW, gLastVH))
+
+    myGui.Add("Text", "x15 y65 w200", "Transparency (0.0 - 1.0):")
+    myTransEdit := myGui.Add("Edit", "x15 y80 w80 vTransparency", Format("{:.2f}", Transparency))
+    myTransUD := myGui.Add("UpDown", "x95 y80 w20 h22 -16 Range0-20", Round(Transparency / 0.05))
+    myTransUD.OnEvent("Change", (ctrl, *) => (
+        myTransEdit.Value := Format("{:.2f}", ctrl.Value * 0.05),
+        WinSetTransparent(Round(255 * (ctrl.Value * 0.05)), FocusGui.Hwnd)
+    ))
+
+    HandleMouseWheel(wParam, lParam, msg, hwnd) {
+        if (hwnd == myTransEdit.Hwnd || hwnd == myTransUD.Hwnd) {
+            dir := (wParam << 32 >> 48) > 0 ? 1 : -1
+            myTransUD.Value += dir
+            myTransEdit.Value := Format("{:.2f}", myTransUD.Value * 0.05)
+            WinSetTransparent(Round(255 * (myTransUD.Value * 0.05)), FocusGui.Hwnd)
+            return 1
+        }
+    }
+    OnMessage(0x020A, HandleMouseWheel)
+
+    myGui.Add("Text", "x15 y115 w200", "Border Color (HEX, empty for auto):")
+    myColorEdit := myGui.Add("Edit", "x15 y130 w100 vBorderColor", IniRead(IniPath, "Settings", "BorderColor", ""))
+    myColorEdit.OnEvent("Change", (ctrl, *) => (FocusGui.BackColor := (ctrl.Value != "" ? ctrl.Value : myGetThemeColor())))
+
+    myGui.Add("Checkbox", "x15 y170 w200 vAutostart Checked" Autostart, "Run at system startup")
+
+    myBtnSave := myGui.Add("Button", "x15 y210 w80 Default", "Save")
+    myBtnSave.OnEvent("Click", mySaveSettings)
+
+    myBtnCancel := myGui.Add("Button", "x105 y210 w80", "Cancel")
+    myBtnCancel.OnEvent("Click", CleanupAndDestroy)
+
+    myGui.Show("w240 h250")
+
+    mySaveSettings(*) {
+        mySaved := myGui.Submit()
+        IniWrite(mySaved.BorderThickness, IniPath, "Settings", "BorderThickness")
+        IniWrite(mySaved.Transparency, IniPath, "Settings", "Transparency")
+        IniWrite(mySaved.BorderColor, IniPath, "Settings", "BorderColor")
+        IniWrite(mySaved.Autostart, IniPath, "Settings", "Autostart")
+
+        Reload()
     }
 }
