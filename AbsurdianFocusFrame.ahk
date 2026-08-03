@@ -53,6 +53,74 @@ myGetThemeColor() {
     return isLight ? "000000" : "ffffff"
 }
 
+myChooseColor(initHex, hwndOwner := 0) {
+    if initHex == ""
+        initHex := "000000"
+    try {
+        initBgr := (Integer("0x" initHex) & 0xFF0000) >> 16 | (Integer("0x" initHex) & 0x00FF00) | (Integer("0x" initHex) & 0x0000FF) << 16
+    } catch {
+        initBgr := 0
+    }
+    CC := Buffer(A_PtrSize == 8 ? 72 : 36, 0)
+    NumPut("UInt", CC.Size, CC, 0)
+    NumPut("Ptr", hwndOwner, CC, 8)
+    NumPut("UInt", initBgr, CC, A_PtrSize == 8 ? 24 : 12)
+    static CustColors := Buffer(64, 0)
+    NumPut("Ptr", CustColors.Ptr, CC, A_PtrSize == 8 ? 32 : 16)
+    NumPut("UInt", 0x103, CC, A_PtrSize == 8 ? 40 : 20) ; CC_RGBINIT=1 | CC_FULLOPEN=2 | CC_ANYCOLOR=0x100
+
+    if DllCall("comdlg32\ChooseColorW", "Ptr", CC.Ptr) {
+        bgr := NumGet(CC, A_PtrSize == 8 ? 24 : 12, "UInt")
+        rgb := (bgr & 0xFF0000) >> 16 | (bgr & 0x00FF00) | (bgr & 0x0000FF) << 16
+        return Format("{:06x}", rgb)
+    }
+    return ""
+}
+
+myPickColorFromScreen() {
+    CoordMode("Mouse", "Screen")
+    CoordMode("Pixel", "Screen")
+    KeyWait("LButton", "U")
+    ToolTip("Click anywhere to pick a color.`nPress ESC or Right-Click to cancel.")
+
+    Hotkey("*LButton", (*) => "", "On")
+    Hotkey("*RButton", (*) => "", "On")
+    CrossCursor := DllCall("LoadCursor", "Ptr", 0, "Int", 32515, "Ptr")
+    CrossCursorCopy := DllCall("CopyImage", "Ptr", CrossCursor, "UInt", 2, "Int", 0, "Int", 0, "UInt", 0, "Ptr")
+    DllCall("SetSystemCursor", "Ptr", CrossCursorCopy, "Int", 32512)
+
+    lastC := ""
+    chosenC := ""
+    while true {
+        MouseGetPos(&mX, &mY)
+        c := PixelGetColor(mX, mY)
+        hexC := StrReplace(c, "0x", "")
+        if (hexC != lastC) {
+            lastC := hexC
+            try FocusGui.BackColor := hexC
+        }
+        if GetKeyState("LButton", "P") {
+            ToolTip()
+            KeyWait("LButton", "U")
+            chosenC := hexC
+            break
+        }
+        if GetKeyState("Escape", "P") || GetKeyState("RButton", "P") {
+            ToolTip()
+            if GetKeyState("RButton", "P")
+                KeyWait("RButton", "U")
+            break
+        }
+        Sleep(10)
+    }
+
+    Hotkey("*LButton", "Off")
+    Hotkey("*RButton", "Off")
+    DllCall("SystemParametersInfo", "UInt", 0x0057, "UInt", 0, "Ptr", 0, "UInt", 0)
+
+    return chosenC
+}
+
 global BorderColor := IniRead(IniPath, "Settings", "BorderColor", "")
 if (BorderColor == "") {
     BorderColor := myGetThemeColor()
@@ -221,8 +289,20 @@ ShowSettingsGui(*) {
     OnMessage(0x020A, HandleMouseWheel)
 
     myGui.Add("Text", "x15 y115 w200", "Border Color (HEX, empty for auto):")
-    myColorEdit := myGui.Add("Edit", "x15 y130 w100 vBorderColor", IniRead(IniPath, "Settings", "BorderColor", ""))
+    myColorEdit := myGui.Add("Edit", "x15 y130 w60 vBorderColor", IniRead(IniPath, "Settings", "BorderColor", ""))
     myColorEdit.OnEvent("Change", (ctrl, *) => (FocusGui.BackColor := (ctrl.Value != "" ? ctrl.Value : myGetThemeColor())))
+    myBtnPicker := myGui.Add("Button", "x80 y129 w24 h24", "🎨")
+    myBtnPicker.OnEvent("Click", (*) => (
+        (res := myChooseColor(myColorEdit.Value != "" ? myColorEdit.Value : myGetThemeColor(), myGui.Hwnd)) != ""
+            ? (myColorEdit.Value := res, FocusGui.BackColor := res)
+        : ""
+    ))
+    myBtnDropper := myGui.Add("Button", "x106 y129 w24 h24", "💉")
+    myBtnDropper.OnEvent("Click", (*) => (
+        (res := myPickColorFromScreen()) != ""
+            ? (myColorEdit.Value := res, FocusGui.BackColor := res)
+        : (FocusGui.BackColor := (myColorEdit.Value != "" ? myColorEdit.Value : myGetThemeColor()))
+    ))
 
     myGui.Add("Checkbox", "x15 y170 w200 vAutostart Checked" Autostart, "Run at system startup")
 
