@@ -20,29 +20,7 @@ A_TrayMenu.Add("Restart", (*) => Reload())
 A_TrayMenu.Add("Exit", (*) => ExitApp())
 
 if !FileExist(IniPath) {
-    readme := "; ============================================================================== `n"
-    readme .= "; WELCOME TO ABSURDIAN FOCUS FRAME! (USER MANUAL)`n"
-    readme .= "; ============================================================================== `n"
-    readme .= "; This program changes the appearance of the native dotted selection border`n"
-    readme .= "; on the desktop to a modern highlight.`n"
-    readme .= ";`n"
-    readme .= "; SETTINGS:`n"
-    readme .= "; BorderThickness - Thickness of the highlight in pixels (e.g., 2, 3, 5).`n"
-    readme .= "; Transparency    - Visibility of the border (from 0.0 to 1.0). 1.0 is solid color,`n"
-    readme .= ";                   and 0.5 is semi-transparent.`n"
-    readme .= "; BorderColor     - Color in HEX format (leave empty for auto-theme).`n"
-    readme .= "; Autostart       - Run the program at system startup (1=Yes, 0=No).`n"
-    readme .= ";`n"
-    readme .= "; Save this file and restart the program (Restart in menu) to apply changes!`n"
-    readme .= ";`n"
-    readme .= "; This project wouldn't be possible without the AutoHotkey community.`n"
-    readme .= "; Special thanks to: Descolada - for the amazing UIA.ahk library,`n"
-    readme .= "; which enables precise communication with the Windows interface.`n"
-    readme .= "; my GitHub: https://github.com/AbsurdianVibe`n"
-    readme .= "; Happy clicking! ~ AbsurdianVibe`n"
-    readme .= "; ============================================================================== `n`n"
-    readme .= "[Settings]`nBorderThickness=2`nTransparency=0.5`nBorderColor=`nAutostart=0`n"
-    FileAppend(readme, IniPath, "UTF-8")
+    FileAppend("[Settings]`nBorderThickness=2`nTransparency=0.5`nBorderColor=`nAutostart=0`n", IniPath, "UTF-8")
 }
 
 global BorderThickness := Integer(IniRead(IniPath, "Settings", "BorderThickness", 2))
@@ -243,6 +221,10 @@ RenderWatchdog() {
 }
 
 ShowSettingsGui(*) {
+    if WinExist("Absurdian Focus Frame") { ;
+        WinActivate("Absurdian Focus Frame")
+        return
+    }
     try {
         if hwnd := WinExist("ahk_class WorkerW") || WinExist("ahk_class Progman")
             WinActivate("ahk_id " hwnd)
@@ -250,7 +232,9 @@ ShowSettingsGui(*) {
     }
     global IsConfigMode := true
 
-    myGui := Gui("-MinimizeBox -MaximizeBox", "Absurdian Focus Frame - Settings")
+    myGui := Gui("-MinimizeBox -MaximizeBox", "Absurdian Focus Frame")
+    myGui.MarginX := 15
+    myGui.MarginY := 15
 
     origThick := BorderThickness
     origTrans := Format("{:.2f}", Transparency)
@@ -260,6 +244,8 @@ ShowSettingsGui(*) {
     CleanupAndDestroy(*) {
         global IsConfigMode := false
         OnMessage(0x020A, HandleMouseWheel, 0)
+        try OnMessage(0x0200, HandleMouseMove, 0)
+        ToolTip()
         FocusGui.BackColor := (BorderColor == "" ? myGetThemeColor() : BorderColor)
         WinSetTransparent(Round(255 * Transparency), FocusGui.Hwnd)
         myApplyBorderRegion(BorderThickness, gLastW, gLastH, gLastVX, gLastVY, gLastVW, gLastVH)
@@ -267,29 +253,32 @@ ShowSettingsGui(*) {
     }
     myGui.OnEvent("Close", CleanupAndDestroy)
 
-    myGui.Add("Text", "x15 y15 w200", "Border Thickness (px):")
-    myThickEdit := myGui.Add("Edit", "x15 y30 w80 vBorderThickness", BorderThickness)
-    myThickUD := myGui.Add("UpDown", "Range1-20", BorderThickness)
+    myBtnInfo := myGui.Add("Button", "xm y5", "ℹ️")
+    myBtnInfo.OnEvent("Click", (*) => MsgBox("WELCOME TO ABSURDIAN FOCUS FRAME!`n`nThis program changes the appearance of the native dotted selection border on the desktop to a modern highlight.`n`nThis project wouldn't be possible without the AutoHotkey community.`nSpecial thanks to: Descolada - for the amazing UIA.ahk library, which enables precise communication with the Windows interface.`nmy GitHub: https://github.com/AbsurdianVibe`n`nHappy clicking!`n`n~ AbsurdianVibe", "Absurdian Focus Frame - Info"))
+
+    myGui.Add("Text", "xm y+5", "Border Thickness (px):")
+    myThickEdit := myGui.Add("Edit", "xm y+5 w80 vBorderThickness", BorderThickness)
+    myThickUD := myGui.Add("UpDown", "Range1-4", BorderThickness)
     myThickUD.OnEvent("Change", (ctrl, *) => (
         myApplyBorderRegion(ctrl.Value, gLastW, gLastH, gLastVX, gLastVY, gLastVW, gLastVH),
         CheckUndoStates()
     ))
-    myBtnUndoThick := myGui.Add("Button", "x100 y29 w24 h24 Disabled", "↩")
+    myBtnUndoThick := myGui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
     myBtnUndoThick.OnEvent("Click", (*) => (
         myThickEdit.Value := origThick,
         myApplyBorderRegion(origThick, gLastW, gLastH, gLastVX, gLastVY, gLastVW, gLastVH),
         CheckUndoStates()
     ))
 
-    myGui.Add("Text", "x15 y65 w200", "Transparency (0.0 - 1.0):")
-    myTransEdit := myGui.Add("Edit", "x15 y80 w60 vTransparency", Format("{:.2f}", Transparency))
-    myTransUD := myGui.Add("UpDown", "x75 y80 w20 h22 -16 Range0-20", Round(Transparency / 0.05))
+    myGui.Add("Text", "xm y+5", "Transparency (0.0 - 1.0):")
+    myTransEdit := myGui.Add("Edit", "xm y+5 w60 vTransparency", Format("{:.2f}", Transparency))
+    myTransUD := myGui.Add("UpDown", "Range0-20", Round(Transparency / 0.05))
     myTransUD.OnEvent("Change", (ctrl, *) => (
         myTransEdit.Value := Format("{:.2f}", ctrl.Value * 0.05),
         WinSetTransparent(Round(255 * (ctrl.Value * 0.05)), FocusGui.Hwnd),
         CheckUndoStates()
     ))
-    myBtnUndoTrans := myGui.Add("Button", "x100 y79 w24 h24 Disabled", "↩")
+    myBtnUndoTrans := myGui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
     myBtnUndoTrans.OnEvent("Click", (*) => (
         myTransUD.Value := Round(origTrans / 0.05),
         myTransEdit.Value := origTrans,
@@ -309,9 +298,21 @@ ShowSettingsGui(*) {
     }
     OnMessage(0x020A, HandleMouseWheel)
 
-    myGui.Add("Text", "x15 y115 w200", "Border Color (HEX, empty for auto):")
-    myColorEdit := myGui.Add("Edit", "x15 y130 w60 vBorderColor", origColor)
+    myGui.Add("Text", "xm y+5", "Border Color (HEX, empty for auto):")
+    myColorEdit := myGui.Add("Edit", "xm y+5 w60 vBorderColor", origColor)
     myColorEdit.LastGood := origColor
+
+    HandleMouseMove(wParam, lParam, msg, hwnd) {
+        static lastHwnd := 0
+        if (hwnd == lastHwnd)
+            return
+        lastHwnd := hwnd
+        if (hwnd == myColorEdit.Hwnd)
+            ToolTip("Leave empty for auto-theme.")
+        else
+            ToolTip()
+    }
+    OnMessage(0x0200, HandleMouseMove)
     myColorChange(ctrl, *) {
         try {
             FocusGui.BackColor := (ctrl.Value != "" ? ctrl.Value : myGetThemeColor())
@@ -324,37 +325,37 @@ ShowSettingsGui(*) {
         }
     }
     myColorEdit.OnEvent("Change", myColorChange)
-    myBtnPicker := myGui.Add("Button", "x80 y129 w24 h24", "🎨")
+    myBtnPicker := myGui.Add("Button", "x+2 yp w22 h22", "🎨")
     myBtnPicker.OnEvent("Click", (*) => (
         (res := myChooseColor(myColorEdit.Value != "" ? myColorEdit.Value : myGetThemeColor(), myGui.Hwnd)) != ""
             ? (myColorEdit.Value := res, FocusGui.BackColor := res, CheckUndoStates())
         : ""
     ))
-    myBtnDropper := myGui.Add("Button", "x106 y129 w24 h24", "💉")
+    myBtnDropper := myGui.Add("Button", "x+2 yp w22 h22", "💉")
     myBtnDropper.OnEvent("Click", (*) => (
         (res := myPickColorFromScreen()) != ""
             ? (myColorEdit.Value := res, FocusGui.BackColor := res, CheckUndoStates())
         : (FocusGui.BackColor := (myColorEdit.Value != "" ? myColorEdit.Value : myGetThemeColor()), CheckUndoStates())
     ))
-    myBtnUndoColor := myGui.Add("Button", "x132 y129 w24 h24 Disabled", "↩")
+    myBtnUndoColor := myGui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
     myBtnUndoColor.OnEvent("Click", (*) => (
         myColorEdit.Value := origColor,
         FocusGui.BackColor := (origColor != "" ? origColor : myGetThemeColor()),
         CheckUndoStates()
     ))
 
-    myCbAutostart := myGui.Add("Checkbox", "x15 y170 w140 vAutostart Checked" Autostart, "Run at system startup")
+    myCbAutostart := myGui.Add("Checkbox", "xm y+5 h22 vAutostart Checked" Autostart, "Run at system startup")
     myCbAutostart.OnEvent("Click", (*) => CheckUndoStates())
-    myBtnUndoAutostart := myGui.Add("Button", "x160 y165 w24 h24 Disabled", "↩")
+    myBtnUndoAutostart := myGui.Add("Button", "x+0 yp w22 h22 Disabled", "↩")
     myBtnUndoAutostart.OnEvent("Click", (*) => (
         myCbAutostart.Value := origAutostart,
         CheckUndoStates()
     ))
 
-    myBtnSave := myGui.Add("Button", "x15 y210 w80 Default", "Save")
+    myBtnSave := myGui.Add("Button", "xm y+5 w80 Default", "Save")
     myBtnSave.OnEvent("Click", mySaveSettings)
 
-    myBtnCancel := myGui.Add("Button", "x105 y210 w80", "Cancel")
+    myBtnCancel := myGui.Add("Button", "x+5 yp w80", "Cancel")
     myBtnCancel.OnEvent("Click", CleanupAndDestroy)
 
     CheckUndoStates(*) {
@@ -364,7 +365,7 @@ ShowSettingsGui(*) {
         myBtnUndoAutostart.Enabled := (myCbAutostart.Value != origAutostart)
     }
 
-    myGui.Show("w240 h250")
+    myGui.Show()
 
     mySaveSettings(*) {
         mySaved := myGui.Submit()
