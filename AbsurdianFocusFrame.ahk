@@ -24,14 +24,13 @@ if !FileExist(IniPath) {
     readme .= "; WELCOME TO ABSURDIAN FOCUS FRAME! (USER MANUAL)`n"
     readme .= "; ============================================================================== `n"
     readme .= "; This program changes the appearance of the native dotted selection border`n"
-    readme .= "; on the desktop and in Windows Explorer to a modern highlight.`n"
+    readme .= "; on the desktop to a modern highlight.`n"
     readme .= ";`n"
     readme .= "; SETTINGS:`n"
     readme .= "; BorderThickness - Thickness of the highlight in pixels (e.g., 2, 3, 5).`n"
     readme .= "; Transparency    - Visibility of the border (from 0.0 to 1.0). 0.0 is solid color,`n"
     readme .= ";                   and 0.5 is semi-transparent.`n"
-    readme .= "; BorderColor     - Color in HEX format (e.g., fdb500 is orange).`n"
-    readme .= "; Explorer        - Should the program also work in folder windows (1=Yes, 0=No).`n"
+    readme .= "; BorderColor     - Color in HEX format (leave empty for auto-theme).`n"
     readme .= "; Autostart       - Run the program at system startup (1=Yes, 0=No).`n"
     readme .= ";`n"
     readme .= "; Save this file and restart the program (Restart in menu) to apply changes!`n"
@@ -42,14 +41,34 @@ if !FileExist(IniPath) {
     readme .= "; my GitHub: https://github.com/AbsurdianVibe`n"
     readme .= "; Happy clicking! ~ AbsurdianVibe`n"
     readme .= "; ============================================================================== `n`n"
-    readme .= "[Settings]`nBorderThickness=2`nTransparency=0.5`nBorderColor=fdb500`nExplorer=1`nAutostart=0`n"
+    readme .= "[Settings]`nBorderThickness=2`nTransparency=0.5`nBorderColor=`nAutostart=0`n"
     FileAppend(readme, IniPath, "UTF-8")
 }
 
 global BorderThickness := Integer(IniRead(IniPath, "Settings", "BorderThickness", 2))
 global Transparency := Float(IniRead(IniPath, "Settings", "Transparency", 0.5))
-global BorderColor := IniRead(IniPath, "Settings", "BorderColor", "fdb500")
-global Explorer := Integer(IniRead(IniPath, "Settings", "Explorer", 1))
+myGetThemeColor() {
+    local isLight := 0
+    try isLight := RegRead("HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize", "AppsUseLightTheme")
+    return isLight ? "000000" : "ffffff"
+}
+
+global BorderColor := IniRead(IniPath, "Settings", "BorderColor", "")
+if (BorderColor == "") {
+    BorderColor := myGetThemeColor()
+}
+
+myThemeChangeHook(wParam, lParam, msg, hwnd) {
+    local targetParam := ""
+    try targetParam := StrGet(lParam)
+    if (targetParam = "ImmersiveColorSet") {
+        if (IniRead(IniPath, "Settings", "BorderColor", "") == "") {
+            global BorderColor := myGetThemeColor()
+            try FocusGui.BackColor := BorderColor
+        }
+    }
+}
+OnMessage(0x001A, myThemeChangeHook)
 global Autostart := Integer(IniRead(IniPath, "Settings", "Autostart", 0))
 
 if A_IsCompiled {
@@ -79,7 +98,7 @@ HideNativeBorderEvent(hWinEventHook, event, hwnd, idObject, idChild, idEventThre
     SetTimer(RenderWatchdog, 15) ; Activate Watchdog
 }
 
-IsSupportedWindow() => WinActive("ahk_class WorkerW") || WinActive("ahk_class Progman") || (Explorer && WinActive("ahk_class CabinetWClass"))
+IsSupportedWindow() => WinActive("ahk_class WorkerW") || WinActive("ahk_class Progman")
 
 ; Polling watchdog clipping the border to the view (Clipping)
 RenderWatchdog() {
@@ -97,43 +116,6 @@ RenderWatchdog() {
         w := rect.r - rect.l, h := rect.b - rect.t
 
         WinGetPos(&oX, &oY, &oW, &oH, "ahk_id " LastHwnd)
-
-        static cachedHwnd := 0, cachedW := 0, cachedH := 0
-        static cachedTopOffset := 0, cachedRightOffset := 0, cachedBottomOffset := 0
-
-        if (LastHwnd != cachedHwnd || oW != cachedW || oH != cachedH) {
-            cachedHwnd := LastHwnd, cachedW := oW, cachedH := oH
-            cachedTopOffset := 0, cachedRightOffset := 0, cachedBottomOffset := 0
-
-            try {
-                if (Explorer && WinActive("ahk_class CabinetWClass")) {
-                    container := UIA.ElementFromHandle(LastHwnd)
-                    try {
-                        if header := container.FindElement({ Type: "Header" }) {
-                            hRect := header.BoundingRectangle
-                            if (hRect.b > oY && hRect.b < oY + oH)
-                                cachedTopOffset := hRect.b - oY
-                        }
-                    }
-                    try {
-                        for scroll in container.FindElements({ Type: "ScrollBar" }) {
-                            sRect := scroll.BoundingRectangle
-                            if ((sRect.b - sRect.t) > (sRect.r - sRect.l)) { ; Vertical
-                                if (sRect.l > oX && sRect.l < oX + oW)
-                                    cachedRightOffset := Max(cachedRightOffset, (oX + oW) - sRect.l)
-                            } else { ; Horizontal
-                                if (sRect.t > oY && sRect.t < oY + oH)
-                                    cachedBottomOffset := Max(cachedBottomOffset, (oY + oH) - sRect.t)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        oY += cachedTopOffset
-        oH -= (cachedTopOffset + cachedBottomOffset)
-        oW -= cachedRightOffset
 
         ix1 := Max(rect.l, oX), iy1 := Max(rect.t, oY)
         ix2 := Min(rect.r, oX + oW), iy2 := Min(rect.b, oY + oH)
