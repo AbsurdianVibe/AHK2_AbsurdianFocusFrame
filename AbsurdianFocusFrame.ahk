@@ -311,7 +311,19 @@ ShowSettingsGui(*) {
 
     myGui.Add("Text", "x15 y115 w200", "Border Color (HEX, empty for auto):")
     myColorEdit := myGui.Add("Edit", "x15 y130 w60 vBorderColor", origColor)
-    myColorEdit.OnEvent("Change", (ctrl, *) => (FocusGui.BackColor := (ctrl.Value != "" ? ctrl.Value : myGetThemeColor()), CheckUndoStates()))
+    myColorEdit.LastGood := origColor
+    myColorChange(ctrl, *) {
+        try {
+            FocusGui.BackColor := (ctrl.Value != "" ? ctrl.Value : myGetThemeColor())
+            ctrl.LastGood := ctrl.Value
+            CheckUndoStates()
+        } catch {
+            MsgBox("Nieprawidlowy format koloru.", "Blad", 16)
+            ctrl.Value := ctrl.HasOwnProp("LastGood") ? ctrl.LastGood : origColor
+            CheckUndoStates()
+        }
+    }
+    myColorEdit.OnEvent("Change", myColorChange)
     myBtnPicker := myGui.Add("Button", "x80 y129 w24 h24", "🎨")
     myBtnPicker.OnEvent("Click", (*) => (
         (res := myChooseColor(myColorEdit.Value != "" ? myColorEdit.Value : myGetThemeColor(), myGui.Hwnd)) != ""
