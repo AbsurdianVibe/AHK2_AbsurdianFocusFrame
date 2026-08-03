@@ -254,7 +254,27 @@ ShowSettingsGui(*) {
     myGui.OnEvent("Close", CleanupAndDestroy)
 
     myBtnInfo := myGui.Add("Button", "xm y5", "ℹ️")
-    myBtnInfo.OnEvent("Click", (*) => MsgBox("WELCOME TO ABSURDIAN FOCUS FRAME!`n`nThis program changes the appearance of the native dotted selection border on the desktop to a modern highlight.`n`nThis project wouldn't be possible without the AutoHotkey community.`nSpecial thanks to: Descolada - for the amazing UIA.ahk library, which enables precise communication with the Windows interface.`nmy GitHub: https://github.com/AbsurdianVibe`n`nHappy clicking!`n`n~ AbsurdianVibe", "Absurdian Focus Frame - Info"))
+    ShowInfoDialog(*) {
+        infoGui := Gui("+Owner" myGui.Hwnd " -MinimizeBox -MaximizeBox", "Absurdian Focus Frame - Info")
+        myGui.Opt("+Disabled")
+        infoClose(*) {
+            myGui.Opt("-Disabled")
+            infoGui.Destroy()
+        }
+        infoGui.OnEvent("Close", infoClose)
+        infoGui.MarginX := 20
+        infoGui.MarginY := 20
+
+        infoGui.Add("Text", "w280", "WELCOME TO ABSURDIAN FOCUS FRAME!`n`nThis program changes the appearance of the native dotted selection border on the desktop to a modern highlight.`n`nThis project wouldn't be possible without the AutoHotkey community.`nSpecial thanks to: Descolada - for the amazing UIA.ahk library, which enables precise communication with the Windows interface.")
+        infoGui.Add("Link", "xm y+10", "my GitHub: <a href=`"https://github.com/AbsurdianVibe`">AbsurdianVibe</a>")
+        infoGui.Add("Text", "xm y+10", "Happy clicking!")
+
+        btnOk := infoGui.Add("Button", "w80 x120 y+20 Default", "OK")
+        btnOk.OnEvent("Click", infoClose)
+
+        infoGui.Show()
+    }
+    myBtnInfo.OnEvent("Click", ShowInfoDialog)
 
     myGui.Add("Text", "xm y+5", "Border Thickness (px):")
     myThickEdit := myGui.Add("Edit", "xm y+5 w80 vBorderThickness", BorderThickness)
