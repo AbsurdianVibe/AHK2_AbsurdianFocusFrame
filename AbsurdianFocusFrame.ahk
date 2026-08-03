@@ -4,7 +4,7 @@
 ;@Ahk2Exe-SetCompanyName AbsurdianVibe
 ;@Ahk2Exe-SetDescription Configurable keyboard focus border for Desktop and Windows Explorer
 ;@Ahk2Exe-SetCopyright Copyright (c) 2026 AbsurdianVibe
-;@Ahk2Exe-SetVersion 1.0.0
+;@Ahk2Exe-SetVersion 1.1.0
 ;@Ahk2Exe-SetProductName Absurdian Focus Frame
 ;@Ahk2Exe-SetLanguage 0x0409 ; English (US)
 #Include "external_code\UIA.ahk"
@@ -272,7 +272,7 @@ ShowSettingsGui(*) {
 
     myGui.Add("Text", "xm y+5", "Transparency (0.0 - 1.0):")
     myTransEdit := myGui.Add("Edit", "xm y+5 w60 vTransparency", Format("{:.2f}", Transparency))
-    myTransUD := myGui.Add("UpDown", "Range0-20", Round(Transparency / 0.05))
+    myTransUD := myGui.Add("UpDown", "-2 Range0-20", Round(Transparency / 0.05))
     myTransUD.OnEvent("Change", (ctrl, *) => (
         myTransEdit.Value := Format("{:.2f}", ctrl.Value * 0.05),
         WinSetTransparent(Round(255 * (ctrl.Value * 0.05)), FocusGui.Hwnd),
