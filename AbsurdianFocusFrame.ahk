@@ -61,7 +61,7 @@ if A_IsCompiled {
     }
 }
 
-global CacheReq := UIA.CreateCacheRequest(["ControlType", "BoundingRectangle"])
+global CacheReq := UIA.CreateCacheRequest(["ControlType", "BoundingRectangle", "IsOffscreen"])
 global FocusGui := Gui("-Caption +ToolWindow +E0x20") ; +E0x20 = Ignores mouse clicks
 FocusGui.BackColor := BorderColor
 WinSetTransparent(Round(255 * (1.0 - Transparency)), FocusGui.Hwnd)
@@ -73,8 +73,8 @@ global FocusHook := DllCall("SetWinEventHook", "UInt", 0x8005, "UInt", 0x8005, "
 ; Triggered by the system on focus change (kills border visibility).
 HideNativeBorderEvent(hWinEventHook, event, hwnd, idObject, idChild, idEventThread, dwmsEventTime) {
     if hwnd
-        try PostMessage(0x0128, 0x00010001, 0,, "ahk_id " hwnd)
-        
+        try PostMessage(0x0128, 0x00010001, 0, , "ahk_id " hwnd)
+
     global LastHwnd := hwnd
     SetTimer(RenderWatchdog, 15) ; Activate Watchdog
 }
@@ -92,43 +92,80 @@ RenderWatchdog() {
         el := UIA.GetFocusedElement(CacheReq)
         if (el.CachedControlType != 50007) ; Only icons
             throw Error()
-            
+
         rect := el.CachedBoundingRectangle
         w := rect.r - rect.l, h := rect.b - rect.t
 
         WinGetPos(&oX, &oY, &oW, &oH, "ahk_id " LastHwnd)
-        
+
+        static cachedHwnd := 0, cachedW := 0, cachedH := 0
+        static cachedTopOffset := 0, cachedRightOffset := 0, cachedBottomOffset := 0
+
+        if (LastHwnd != cachedHwnd || oW != cachedW || oH != cachedH) {
+            cachedHwnd := LastHwnd, cachedW := oW, cachedH := oH
+            cachedTopOffset := 0, cachedRightOffset := 0, cachedBottomOffset := 0
+
+            try {
+                if (Explorer && WinActive("ahk_class CabinetWClass")) {
+                    container := UIA.ElementFromHandle(LastHwnd)
+                    try {
+                        if header := container.FindElement({ Type: "Header" }) {
+                            hRect := header.BoundingRectangle
+                            if (hRect.b > oY && hRect.b < oY + oH)
+                                cachedTopOffset := hRect.b - oY
+                        }
+                    }
+                    try {
+                        for scroll in container.FindElements({ Type: "ScrollBar" }) {
+                            sRect := scroll.BoundingRectangle
+                            if ((sRect.b - sRect.t) > (sRect.r - sRect.l)) { ; Vertical
+                                if (sRect.l > oX && sRect.l < oX + oW)
+                                    cachedRightOffset := Max(cachedRightOffset, (oX + oW) - sRect.l)
+                            } else { ; Horizontal
+                                if (sRect.t > oY && sRect.t < oY + oH)
+                                    cachedBottomOffset := Max(cachedBottomOffset, (oY + oH) - sRect.t)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        oY += cachedTopOffset
+        oH -= (cachedTopOffset + cachedBottomOffset)
+        oW -= cachedRightOffset
+
         ix1 := Max(rect.l, oX), iy1 := Max(rect.t, oY)
         ix2 := Min(rect.r, oX + oW), iy2 := Min(rect.b, oY + oH)
-        
-        if (w <= 0 || h <= 0 || ix1 >= ix2 || iy1 >= iy2) {
+
+        if (el.CachedIsOffscreen || w <= 0 || h <= 0 || ix1 >= ix2 || iy1 >= iy2) {
             FocusGui.Hide()
             lastState := ""
             lastHwndAbove := -1
             return ; Invisible (off-screen), but we don't kill the timer - waiting for return
         }
-            
+
         vX := ix1 - rect.l, vY := iy1 - rect.t
         vW := ix2 - ix1, vH := iy2 - iy1
-        
+
         state := rect.l "|" rect.t "|" w "|" h "|" vX "|" vY "|" vW "|" vH
         stateChange := (state != lastState)
-        
+
         if (stateChange) {
             lastState := state
 
             g := BorderThickness
             hRgnOuter := DllCall("CreateRectRgn", "Int", 0, "Int", 0, "Int", w, "Int", h, "Ptr")
-            hRgnInner := DllCall("CreateRectRgn", "Int", g, "Int", g, "Int", w-g, "Int", h-g, "Ptr")
+            hRgnInner := DllCall("CreateRectRgn", "Int", g, "Int", g, "Int", w - g, "Int", h - g, "Ptr")
             DllCall("CombineRgn", "Ptr", hRgnOuter, "Ptr", hRgnOuter, "Ptr", hRgnInner, "Int", 4) ; RGN_DIFF
-            
-            hRgnClip := DllCall("CreateRectRgn", "Int", vX, "Int", vY, "Int", vX+vW, "Int", vY+vH, "Ptr")
+
+            hRgnClip := DllCall("CreateRectRgn", "Int", vX, "Int", vY, "Int", vX + vW, "Int", vY + vH, "Ptr")
             DllCall("CombineRgn", "Ptr", hRgnOuter, "Ptr", hRgnOuter, "Ptr", hRgnClip, "Int", 1) ; RGN_AND
-            
+
             DllCall("SetWindowRgn", "Ptr", FocusGui.Hwnd, "Ptr", hRgnOuter, "Int", 1)
             DllCall("DeleteObject", "Ptr", hRgnInner)
             DllCall("DeleteObject", "Ptr", hRgnClip)
-            
+
             FocusGui.Show("NA x" rect.l " y" rect.t " w" w " h" h)
         }
 
