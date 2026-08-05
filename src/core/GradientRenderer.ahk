@@ -14,25 +14,7 @@ class myGradientRenderer {
             DllCall("DeleteObject", "Ptr", hOld)
     }
 
-    myOverlayIndicator(pBits, w, h, ratio) {
-        xMarker := Round(ratio * (w - 1))
-        Loop h {
-            y := A_Index - 1
-            Loop 3 {
-                px := xMarker - 1 + (A_Index - 1)
-                if (px >= 0 && px < w) {
-                    offset := (y * w + px) * 4
-                    isWhite := (A_Index == 2)
-                    colVal := isWhite ? 255 : 0
-                    NumPut("UChar", colVal, pBits, offset)     ; B
-                    NumPut("UChar", colVal, pBits, offset + 1) ; G
-                    NumPut("UChar", colVal, pBits, offset + 2) ; R
-                }
-            }
-        }
-    }
-
-    myRenderHorizontalGradient(w, h, ratio, colorCallback) {
+    myRenderHorizontalGradient(w, h, colorCallback) {
         dane := this.myInitBitmap(w, h)
         Loop w {
             x := A_Index - 1
@@ -45,19 +27,18 @@ class myGradientRenderer {
                 NumPut("UChar", col.r, dane.ptr, offset + 2)
             }
         }
-        this.myOverlayIndicator(dane.ptr, w, h, ratio)
         return dane.hbm
     }
 
-    myRenderSpectrum(w, h, ratio) {
-        return this.myRenderHorizontalGradient(w, h, ratio, (x, width) => (
+    myRenderSpectrum(w, h) {
+        return this.myRenderHorizontalGradient(w, h, (x, width) => (
             hue := (x / (width - 1)) * 359,
             myHsvToRgb(hue, 1, 1)
         ))
     }
 
-    myRenderLuminance(w, h, ratio, r, g, b) {
-        return this.myRenderHorizontalGradient(w, h, ratio, (x, width) => (
+    myRenderLuminance(w, h, r, g, b) {
+        return this.myRenderHorizontalGradient(w, h, (x, width) => (
             i := (x / (width - 1)),
             (i < 0.5) ? (
                 p := i / 0.5,
@@ -69,9 +50,9 @@ class myGradientRenderer {
         ))
     }
 
-    myRenderSaturation(w, h, ratio, r, g, b) {
+    myRenderSaturation(w, h, r, g, b) {
         szary := Round((r * 0.299) + (g * 0.587) + (b * 0.114))
-        return this.myRenderHorizontalGradient(w, h, ratio, (x, width) => (
+        return this.myRenderHorizontalGradient(w, h, (x, width) => (
             i := (x / (width - 1)),
             { r: Round(r + (szary - r) * i), g: Round(g + (szary - g) * i), b: Round(b + (szary - b) * i) }
         ))

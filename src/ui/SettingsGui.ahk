@@ -19,6 +19,14 @@ class mySettingsGui {
         this.HueBaseR := 255
         this.HueBaseG := 0
         this.HueBaseB := 0
+        this.lastHue := -1
+        this.lastSat := -1
+        this.lastHueLum := -1
+        this.picW := 300
+        this.picH := 40
+        this.indW := 10
+        this.indH := 60
+        this.gdiScale := 3
     }
 
     myShow() {
@@ -43,7 +51,7 @@ class mySettingsGui {
         this.origColor := IniRead(this.Config.IniPath, "Settings", "BorderColor", "")
         this.origAutostart := this.Config.Autostart
 
-        this.Gui.OnEvent("Close", (*) => this.CleanupAndDestroy())
+        this.Gui.OnEvent("Close", (*) => this.myCleanupAndDestroy())
 
         myBtnInfo := this.Gui.Add("Button", "xm y5", "ℹ️")
         myBtnInfo.OnEvent("Click", (*) => this.ShowInfoDialog())
@@ -79,23 +87,24 @@ class mySettingsGui {
         myBtnPicker := this.Gui.Add("Button", "x+2 yp w22 h22", "🎨")
         myBtnPicker.OnEvent("Click", (*) => this.myTogglePicker())
 
-        myBtnDropper := this.Gui.Add("Button", "x+2 yp w22 h22", "💉")
-        myBtnDropper.OnEvent("Click", (*) => this.OnColorDrop())
-
+        myBtnDrop := this.Gui.Add("Button", "x+2 yp w22 h22", "💉")
+        myBtnDrop.OnEvent("Click", (*) => this.OnColorDrop())
         this.myBtnUndoColor := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
         this.myBtnUndoColor.OnEvent("Click", (*) => this.OnUndoColor())
 
-        this.myCbAutostart := this.Gui.Add("Checkbox", "xm y+5 h22 vAutostart Checked" this.Config.Autostart, "Run at system startup")
-        this.myCbAutostart.OnEvent("Click", (*) => this.CheckUndoStates())
-
-        this.myBtnUndoAutostart := this.Gui.Add("Button", "x+0 yp w22 h22 Disabled", "↩")
+        this.Gui.Add("Text", "xm y+15", "Launch with Windows:")
+        this.myCbAutostart := this.Gui.Add("CheckBox", "xm y+5 vAutostart", "Enable Autostart")
+        this.myCbAutostart.Value := this.origAutostart
+        this.myCbAutostart.OnEvent("Click", (ctrl, *) => this.CheckUndoStates())
+        this.myBtnUndoAutostart := this.Gui.Add("Button", "x+10 yp w22 h22 Disabled", "↩")
         this.myBtnUndoAutostart.OnEvent("Click", (*) => this.OnUndoAutostart())
 
-        myBtnSave := this.Gui.Add("Button", "xm y+5 w80 Default", "Save")
-        myBtnSave.OnEvent("Click", (*) => this.mySaveSettings())
+        btnSave := this.Gui.Add("Button", "xm y+20 w100 Default", "Save")
+        btnSave.OnEvent("Click", (*) => this.mySaveSettings())
+        btnCancel := this.Gui.Add("Button", "x+10 yp w100", "Cancel")
+        btnCancel.OnEvent("Click", (*) => this.myCleanupAndDestroy())
 
-        myBtnCancel := this.Gui.Add("Button", "x+5 yp w80", "Cancel")
-        myBtnCancel.OnEvent("Click", (*) => this.CleanupAndDestroy())
+        this.CheckUndoStates()
 
         this.Gui.Show("AutoSize Hide")
         this.Gui.GetClientPos(&_x, &_y, &baseCW, &baseCH)
@@ -103,17 +112,20 @@ class mySettingsGui {
 
         ; --- SEKCYJNY COLOR PICKER GDI ---
         this.lblSpec := this.Gui.Add("Text", "ym Section Hidden", "Spectrum:")
-        this.picSpec := this.Gui.Add("Picture", "xs y+5 w180 h20 +Border +0x0100 +0xE Hidden")
+        this.picSpec := this.Gui.Add("Picture", "xs y+5 w" this.picW " h" this.picH " +Border +0x0100 +0xE +0x0040 +0x04000000 Hidden")
+        this.indSpec := this.Gui.Add("text", "xp yp w" this.indW " h" this.indH " +0x04000000 Hidden +Border")
         this.picSpec.OnEvent("Click", (*) => this.myOnSliderInteract(this.picSpec))
 
         this.lblSat := this.Gui.Add("Text", "xs y+10 Hidden", "Saturation:")
-        this.picSat := this.Gui.Add("Picture", "xs y+5 w180 h20 +Border +0x0100 +0xE Hidden")
+        this.picSat := this.Gui.Add("Picture", "xs y+5 w" this.picW " h" this.picH " +Border +0x0100 +0xE +0x0040 +0x04000000 Hidden")
+        this.indSat := this.Gui.Add("text", "xp yp w" this.indW " h" this.indH " +0x04000000 Hidden +Border")
         this.picSat.OnEvent("Click", (*) => this.myOnSliderInteract(this.picSat))
 
         this.lblLum := this.Gui.Add("Text", "xs y+10 h22 +0x0200 Hidden", "Luminance:")
         this.btnLumR := this.Gui.Add("Button", "x+5 yp w22 h22 Hidden", "M")
         this.btnLumR.OnEvent("Click", (*) => this.myResetLuminance())
-        this.picLum := this.Gui.Add("Picture", "xs y+5 w180 h20 +Border +0x0100 +0xE Hidden")
+        this.picLum := this.Gui.Add("Picture", "xs y+5 w" this.picW " h" this.picH " +Border +0x0100 +0xE +0x0040 +0x04000000 Hidden")
+        this.indLum := this.Gui.Add("text", "xp yp w" this.indW " h" this.indH " +0x04000000 Hidden +Border")
         this.picLum.OnEvent("Click", (*) => this.myOnSliderInteract(this.picLum))
 
         this.mySyncSlidersFromHex(this.origColor != "" ? this.origColor : myGetThemeColor())
@@ -127,14 +139,14 @@ class mySettingsGui {
         w := 180, h := 20
         if (this.PickerVisible) {
             this.myUpdateColorSpace(true)
-            this.lblSpec.Visible := true, this.picSpec.Visible := true
-            this.lblSat.Visible := true, this.picSat.Visible := true
-            this.lblLum.Visible := true, this.picLum.Visible := true, this.btnLumR.Visible := true
+            this.lblSpec.Visible := true, this.picSpec.Visible := true, this.indSpec.Visible := true
+            this.lblSat.Visible := true, this.picSat.Visible := true, this.indSat.Visible := true
+            this.lblLum.Visible := true, this.picLum.Visible := true, this.indLum.Visible := true, this.btnLumR.Visible := true
             this.Gui.Show("AutoSize")
         } else {
-            this.lblSpec.Visible := false, this.picSpec.Visible := false
-            this.lblSat.Visible := false, this.picSat.Visible := false
-            this.lblLum.Visible := false, this.picLum.Visible := false, this.btnLumR.Visible := false
+            this.lblSpec.Visible := false, this.picSpec.Visible := false, this.indSpec.Visible := false
+            this.lblSat.Visible := false, this.picSat.Visible := false, this.indSat.Visible := false
+            this.lblLum.Visible := false, this.picLum.Visible := false, this.indLum.Visible := false, this.btnLumR.Visible := false
             this.Gui.Show("w" this.baseCW " h" this.baseCH)
         }
     }
@@ -151,7 +163,7 @@ class mySettingsGui {
         baseCoord := cX
 
         if (scrollDir != 0) {
-            step := 0.05
+            step := 0.02
             ratio := (ctrlObj == this.picSpec) ? this.HueRatio : ((ctrlObj == this.picSat) ? this.SatRatio : this.LumRatio)
             ratio += (scrollDir * step)
 
@@ -176,49 +188,79 @@ class mySettingsGui {
             rel := mX - baseCoord
             ratio := rel / (limit - 1)
 
+            changed := false
             if (ctrlObj == this.picSpec) {
                 ratio := Mod(ratio, 1.0)
                 if (ratio < 0)
                     ratio += 1.0
                 if (ratio != this.HueRatio) {
                     this.HueRatio := ratio
-                    this.myUpdateColorSpace()
+                    changed := true
                 }
             } else {
                 ratio := Max(0.0, Min(1.0, ratio))
                 if (ctrlObj == this.picSat && ratio != this.SatRatio) {
                     this.SatRatio := ratio
-                    this.myUpdateColorSpace()
+                    changed := true
                 } else if (ctrlObj == this.picLum && ratio != this.LumRatio) {
                     this.LumRatio := ratio
-                    this.myUpdateColorSpace()
+                    changed := true
                 }
             }
 
+            if (changed)
+                this.myUpdateColorSpace(false, true) ; FastTrack
+
             if !GetKeyState("LButton", "P")
                 break
-            Sleep(20)
+            Sleep(15)
         }
+        this.myUpdateColorSpace()
     }
 
-    myUpdateColorSpace(firstRender := false) {
+    myUpdateColorSpace(firstRender := false, fastTrack := false) {
         hue := this.HueRatio * 359
         baseRgb := myHsvToRgb(hue, 1, 1)
         this.HueBaseR := baseRgb.r, this.HueBaseG := baseRgb.g, this.HueBaseB := baseRgb.b
+        bufferW := this.picW * this.gdiScale
 
-        hBM1 := this.GradientEngine.myRenderSpectrum(600, 40, this.HueRatio)
-        this.GradientEngine.myApplyBitmap(this.picSpec.Hwnd, hBM1)
-
-        hBM2 := this.GradientEngine.myRenderSaturation(600, 40, this.SatRatio, this.HueBaseR, this.HueBaseG, this.HueBaseB)
-        this.GradientEngine.myApplyBitmap(this.picSat.Hwnd, hBM2)
+        if (firstRender) {
+            hBM1 := this.GradientEngine.myRenderSpectrum(bufferW, this.picH)
+            this.GradientEngine.myApplyBitmap(this.picSpec.Hwnd, hBM1)
+        }
 
         szary := Round((this.HueBaseR * 0.299) + (this.HueBaseG * 0.587) + (this.HueBaseB * 0.114))
         sr := Round(this.HueBaseR + (szary - this.HueBaseR) * this.SatRatio)
         sg := Round(this.HueBaseG + (szary - this.HueBaseG) * this.SatRatio)
         sb := Round(this.HueBaseB + (szary - this.HueBaseB) * this.SatRatio)
 
-        hBM3 := this.GradientEngine.myRenderLuminance(600, 40, this.LumRatio, sr, sg, sb)
-        this.GradientEngine.myApplyBitmap(this.picLum.Hwnd, hBM3)
+        if (!fastTrack) {
+            if (firstRender || this.lastHue != hue) {
+                hBM2 := this.GradientEngine.myRenderSaturation(bufferW, this.picH, this.HueBaseR, this.HueBaseG, this.HueBaseB)
+                this.GradientEngine.myApplyBitmap(this.picSat.Hwnd, hBM2)
+                this.lastHue := hue
+            }
+            if (firstRender || this.lastSat != this.SatRatio || this.lastHueLum != hue) {
+                hBM3 := this.GradientEngine.myRenderLuminance(bufferW, this.picH, sr, sg, sb)
+                this.GradientEngine.myApplyBitmap(this.picLum.Hwnd, hBM3)
+                this.lastSat := this.SatRatio
+                this.lastHueLum := hue
+            }
+        }
+
+        if (this.PickerVisible) {
+            this.picSpec.GetPos(&x1, &y1, &w1, &h1)
+            this.indSpec.GetPos(&ix1, &iy1, &iw1, &ih1)
+            this.indSpec.Move(x1 + Round(this.HueRatio * (w1 - 1)) - (iw1 // 2), y1 + ((h1 - ih1) // 2), iw1, ih1)
+
+            this.picSat.GetPos(&x2, &y2, &w2, &h2)
+            this.indSat.GetPos(&ix2, &iy2, &iw2, &ih2)
+            this.indSat.Move(x2 + Round(this.SatRatio * (w2 - 1)) - (iw2 // 2), y2 + ((h2 - ih2) // 2), iw2, ih2)
+
+            this.picLum.GetPos(&x3, &y3, &w3, &h3)
+            this.indLum.GetPos(&ix3, &iy3, &iw3, &ih3)
+            this.indLum.Move(x3 + Round(this.LumRatio * (w3 - 1)) - (iw3 // 2), y3 + ((h3 - ih3) // 2), iw3, ih3)
+        }
 
         i := this.LumRatio
         if (i < 0.5) {
@@ -234,9 +276,10 @@ class mySettingsGui {
         }
 
         hex := Format("{:02x}{:02x}{:02x}", fr, fg, fb)
-        this.myColorEdit.Value := hex
-        if (!firstRender)
+        if (!firstRender) {
+            this.myColorEdit.Value := hex
             this.Renderer.FocusGui.BackColor := hex
+        }
         this.CheckUndoStates()
     }
 
@@ -363,7 +406,7 @@ class mySettingsGui {
         Reload()
     }
 
-    CleanupAndDestroy(*) {
+    myCleanupAndDestroy(*) {
         this.Renderer.IsConfigMode := false
         OnMessage(0x020A, this.WheelBound, 0)
         try OnMessage(0x0200, this.MoveBound, 0)
