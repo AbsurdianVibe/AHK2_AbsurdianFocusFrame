@@ -9,33 +9,76 @@ myGetThemeColor() {
 }
 
 /**
- * Opens color selection dialog.
- * @param {String} initHex - Initial hex color.
- * @param {Integer} [hwndOwner=0] - Window owner handle.
- * @returns {String} Selected hex color.
+ * Konwertuje kolor z modelu HSV na RGB.
+ * @param {Number} h - Odcień (Hue) w zakresie 0-359.
+ * @param {Number} s - Nasycenie (Saturation) w zakresie 0.0-1.0.
+ * @param {Number} v - Wartość/Jasność (Value) w zakresie 0.0-1.0.
+ * @returns {Map} - Zwraca mapę z kluczami r, g, b (0-255).
  */
-myChooseColor(initHex, hwndOwner := 0) {
-    if initHex == ""
-        initHex := "000000"
-    try {
-        initBgr := (Integer("0x" initHex) & 0xFF0000) >> 16 | (Integer("0x" initHex) & 0x00FF00) | (Integer("0x" initHex) & 0x0000FF) << 16
-    } catch {
-        initBgr := 0
-    }
-    CC := Buffer(A_PtrSize == 8 ? 72 : 36, 0)
-    NumPut("UInt", CC.Size, CC, 0)
-    NumPut("Ptr", hwndOwner, CC, 8)
-    NumPut("UInt", initBgr, CC, A_PtrSize == 8 ? 24 : 12)
-    static CustColors := Buffer(64, 0)
-    NumPut("Ptr", CustColors.Ptr, CC, A_PtrSize == 8 ? 32 : 16)
-    NumPut("UInt", 0x103, CC, A_PtrSize == 8 ? 40 : 20)
+myHsvToRgb(h, s, v) {
+    i := Floor(h / 60)
+    f := h / 60 - i
+    p := v * (1 - s)
+    q := v * (1 - f * s)
+    t := v * (1 - (1 - f) * s)
 
-    if DllCall("comdlg32\ChooseColorW", "Ptr", CC.Ptr) {
-        bgr := NumGet(CC, A_PtrSize == 8 ? 24 : 12, "UInt")
-        rgb := (bgr & 0xFF0000) >> 16 | (bgr & 0x00FF00) | (bgr & 0x0000FF) << 16
-        return Format("{:06x}", rgb)
+    switch Mod(i, 6) {
+        case 0: r := v, g := t, b := p
+        case 1: r := q, g := v, b := p
+        case 2: r := p, g := v, b := t
+        case 3: r := p, g := q, b := v
+        case 4: r := t, g := p, b := v
+        case 5: r := v, g := p, b := q
     }
-    return ""
+
+    return { r: Round(r * 255), g: Round(g * 255), b: Round(b * 255) }
+}
+
+/**
+ * Konwertuje ciąg HEX na obiekt RGB.
+ * @param {String} hex - Ciąg koloru (np. "FF0000").
+ * @returns {Map} - Map {r, g, b}.
+ */
+myHexToRgb(hex) {
+    return {
+        r: Integer("0x" . SubStr(hex, 1, 2)),
+        g: Integer("0x" . SubStr(hex, 3, 2)),
+        b: Integer("0x" . SubStr(hex, 5, 2))
+    }
+}
+
+/**
+ * Konwertuje ciąg HEX na obiekt HSL dla synchronizacji suwaków.
+ * @param {String} hexColor - Ciąg koloru.
+ * @returns {Map} - Zwraca mapę { h, s, l }.
+ */
+myHexToHsl(hexColor) {
+    hexColor := StrReplace(hexColor, "#")
+    if (StrLen(hexColor) != 6)
+        return { h: 0, s: 1, l: 0.5 }
+    r := Integer("0x" SubStr(hexColor, 1, 2)) / 255
+    g := Integer("0x" SubStr(hexColor, 3, 2)) / 255
+    b := Integer("0x" SubStr(hexColor, 5, 2)) / 255
+    
+    maxC := Max(r, g, b)
+    minC := Min(r, g, b)
+    l := (maxC + minC) / 2
+    
+    if (maxC == minC) {
+        h := 0
+        s := 0
+    } else {
+        d := maxC - minC
+        s := (l > 0.5) ? d / (2 - maxC - minC) : d / (maxC + minC)
+        if (maxC == r)
+            h := (g - b) / d + (g < b ? 6 : 0)
+        else if (maxC == g)
+            h := (b - r) / d + 2
+        else
+            h := (r - g) / d + 4
+        h /= 6
+    }
+    return { h: h, s: 1.0 - s, l: 1.0 - l }
 }
 
 /**
