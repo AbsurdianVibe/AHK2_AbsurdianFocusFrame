@@ -20,17 +20,30 @@ A_TrayMenu.Add("Restart", (*) => Reload())
 A_TrayMenu.Add("Exit", (*) => ExitApp())
 
 if !FileExist(IniPath) {
-    FileAppend("[Settings]`nBorderThickness=2`nTransparency=0.5`nBorderColor=`nAutostart=0`n", IniPath, "UTF-8")
+    IniWrite(2, IniPath, "Settings", "BorderThickness")
+    IniWrite(0.5, IniPath, "Settings", "Transparency")
+    IniWrite("", IniPath, "Settings", "BorderColor")
+    IniWrite(0, IniPath, "Settings", "Autostart")
 }
 
 global BorderThickness := Integer(IniRead(IniPath, "Settings", "BorderThickness", 2))
 global Transparency := Float(IniRead(IniPath, "Settings", "Transparency", 0.5))
+/**
+ * Retrieves current system theme color.
+ * @returns {String} Hex color code.
+ */
 myGetThemeColor() {
     local isLight := 0
     try isLight := RegRead("HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize", "AppsUseLightTheme")
     return isLight ? "000000" : "ffffff"
 }
 
+/**
+ * Opens color selection dialog.
+ * @param {String} initHex - Initial hex color.
+ * @param {Integer} [hwndOwner=0] - Window owner handle.
+ * @returns {String} Selected hex color.
+ */
 myChooseColor(initHex, hwndOwner := 0) {
     if initHex == ""
         initHex := "000000"
@@ -55,6 +68,10 @@ myChooseColor(initHex, hwndOwner := 0) {
     return ""
 }
 
+/**
+ * Starts screen color picking mode.
+ * @returns {String} Picked hex color.
+ */
 myPickColorFromScreen() {
     CoordMode("Mouse", "Screen")
     CoordMode("Pixel", "Screen")
@@ -106,6 +123,10 @@ if (BorderColor == "") {
 
 global IsConfigMode := false
 
+/**
+ * Hook for system theme changes.
+ * @param {Integer} lParam - Pointer to a string specifying the changed theme parameter name.
+ */
 myThemeChangeHook(wParam, lParam, msg, hwnd) {
     local targetParam := ""
     try targetParam := StrGet(lParam)
@@ -138,6 +159,10 @@ global LastHwnd := 0
 global FocusHook := DllCall("SetWinEventHook", "UInt", 0x8005, "UInt", 0x8005, "Ptr", 0, "Ptr", CallbackCreate(HideNativeBorderEvent, "F", 7), "UInt", 0, "UInt", 0, "UInt", 0)
 
 ; Triggered by the system on focus change (kills border visibility).
+/**
+ * Hides native border on focus event.
+ * @param {Integer} hwnd - Window handle.
+ */
 HideNativeBorderEvent(hWinEventHook, event, hwnd, idObject, idChild, idEventThread, dwmsEventTime) {
     if hwnd
         try PostMessage(0x0128, 0x00010001, 0, , "ahk_id " hwnd)
@@ -146,9 +171,23 @@ HideNativeBorderEvent(hWinEventHook, event, hwnd, idObject, idChild, idEventThre
     SetTimer(RenderWatchdog, 15) ; Activate Watchdog
 }
 
+/**
+ * Checks if active window is supported.
+ * @returns {Boolean} True if supported.
+ */
 IsSupportedWindow() => WinActive("ahk_class WorkerW") || WinActive("ahk_class Progman")
 
 global gLastW := 0, gLastH := 0, gLastVX := 0, gLastVY := 0, gLastVW := 0, gLastVH := 0
+/**
+ * Applies border clip region.
+ * @param {Integer} g - Border thickness.
+ * @param {Integer} w - Width.
+ * @param {Integer} h - Height.
+ * @param {Integer} vX - Viewport X.
+ * @param {Integer} vY - Viewport Y.
+ * @param {Integer} vW - Viewport width.
+ * @param {Integer} vH - Viewport height.
+ */
 myApplyBorderRegion(g, w, h, vX, vY, vW, vH) {
     if (w <= 0 || h <= 0 || vW <= 0 || vH <= 0)
         return
@@ -163,6 +202,9 @@ myApplyBorderRegion(g, w, h, vX, vY, vW, vH) {
 }
 
 ; Polling watchdog clipping the border to the view (Clipping)
+/**
+ * Renders border watchdog logic.
+ */
 RenderWatchdog() {
     if (IsConfigMode && !IsSupportedWindow())
         return
@@ -220,6 +262,9 @@ RenderWatchdog() {
     }
 }
 
+/**
+ * Displays main settings GUI window.
+ */
 ShowSettingsGui(*) {
     if WinExist("Absurdian Focus Frame") { ;
         WinActivate("Absurdian Focus Frame")
@@ -241,6 +286,9 @@ ShowSettingsGui(*) {
     origColor := IniRead(IniPath, "Settings", "BorderColor", "")
     origAutostart := Autostart
 
+    /**
+     * Cleans resources and destroys GUI.
+     */
     CleanupAndDestroy(*) {
         global IsConfigMode := false
         OnMessage(0x020A, HandleMouseWheel, 0)
@@ -254,9 +302,15 @@ ShowSettingsGui(*) {
     myGui.OnEvent("Close", CleanupAndDestroy)
 
     myBtnInfo := myGui.Add("Button", "xm y5", "ℹ️")
+    /**
+     * Displays information dialog.
+     */
     ShowInfoDialog(*) {
         infoGui := Gui("+Owner" myGui.Hwnd " -MinimizeBox -MaximizeBox", "Absurdian Focus Frame - Info")
         myGui.Opt("+Disabled")
+        /**
+         * Closes information dialog.
+         */
         infoClose(*) {
             myGui.Opt("-Disabled")
             infoGui.Destroy()
@@ -306,6 +360,12 @@ ShowSettingsGui(*) {
         CheckUndoStates()
     ))
 
+    /**
+     * Handles mouse wheel for GUI controls.
+     * @param {Integer} wParam - Contains the mouse wheel rotation distance and direction.
+     * @param {Integer} hwnd - Window handle.
+     * @returns {Integer|Void} Handled state.
+     */
     HandleMouseWheel(wParam, lParam, msg, hwnd) {
         if (hwnd == myTransEdit.Hwnd || hwnd == myTransUD.Hwnd) {
             dir := (wParam << 32 >> 48) > 0 ? 1 : -1
@@ -322,6 +382,10 @@ ShowSettingsGui(*) {
     myColorEdit := myGui.Add("Edit", "xm y+5 w60 vBorderColor", origColor)
     myColorEdit.LastGood := origColor
 
+    /**
+     * Handles mouse move to show tooltips.
+     * @param {Integer} hwnd - Window handle.
+     */
     HandleMouseMove(wParam, lParam, msg, hwnd) {
         static lastHwnd := 0
         if (hwnd == lastHwnd)
@@ -333,6 +397,10 @@ ShowSettingsGui(*) {
             ToolTip()
     }
     OnMessage(0x0200, HandleMouseMove)
+    /**
+     * Handles color edit control changes.
+     * @param {Object} ctrl - GUI control object.
+     */
     myColorChange(ctrl, *) {
         try {
             FocusGui.BackColor := (ctrl.Value != "" ? ctrl.Value : myGetThemeColor())
@@ -378,6 +446,9 @@ ShowSettingsGui(*) {
     myBtnCancel := myGui.Add("Button", "x+5 yp w80", "Cancel")
     myBtnCancel.OnEvent("Click", CleanupAndDestroy)
 
+    /**
+     * Updates undo buttons enabled states.
+     */
     CheckUndoStates(*) {
         myBtnUndoThick.Enabled := (myThickUD.Value != origThick)
         myBtnUndoTrans.Enabled := (myTransEdit.Value != origTrans)
@@ -387,6 +458,9 @@ ShowSettingsGui(*) {
 
     myGui.Show()
 
+    /**
+     * Saves settings to INI and reloads.
+     */
     mySaveSettings(*) {
         mySaved := myGui.Submit()
         IniWrite(mySaved.BorderThickness, IniPath, "Settings", "BorderThickness")
