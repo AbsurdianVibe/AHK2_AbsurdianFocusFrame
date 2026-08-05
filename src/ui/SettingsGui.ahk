@@ -1,4 +1,13 @@
 class mySettingsGui {
+    /** @type {myConfigManager} */
+    Config := ""
+    /** @type {myRenderEngine} */
+    Renderer := ""
+
+    /**
+     * @param {myConfigManager} configManager
+     * @param {myRenderEngine} renderEngine
+     */
     __New(configManager, renderEngine) {
         this.Config := configManager
         this.Renderer := renderEngine
@@ -25,59 +34,59 @@ class mySettingsGui {
         this.origColor := IniRead(this.Config.IniPath, "Settings", "BorderColor", "")
         this.origAutostart := this.Config.Autostart
 
-        this.Gui.OnEvent("Close", ObjBindMethod(this, "CleanupAndDestroy"))
+        this.Gui.OnEvent("Close", (*) => this.CleanupAndDestroy())
 
         myBtnInfo := this.Gui.Add("Button", "xm y5", "ℹ️")
-        myBtnInfo.OnEvent("Click", ObjBindMethod(this, "ShowInfoDialog"))
+        myBtnInfo.OnEvent("Click", (*) => this.ShowInfoDialog())
 
         this.Gui.Add("Text", "xm y+5", "Border Thickness (px):")
         this.myThickEdit := this.Gui.Add("Edit", "xm y+5 w80 vBorderThickness", this.Config.BorderThickness)
         this.myThickUD := this.Gui.Add("UpDown", "Range1-4", this.Config.BorderThickness)
-        this.myThickUD.OnEvent("Change", ObjBindMethod(this, "OnThickChange"))
+        this.myThickUD.OnEvent("Change", (ctrl, *) => this.OnThickChange(ctrl))
 
         this.myBtnUndoThick := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
-        this.myBtnUndoThick.OnEvent("Click", ObjBindMethod(this, "OnUndoThick"))
+        this.myBtnUndoThick.OnEvent("Click", (*) => this.OnUndoThick())
 
         this.Gui.Add("Text", "xm y+5", "Transparency (0.0 - 1.0):")
         this.myTransEdit := this.Gui.Add("Edit", "xm y+5 w60 vTransparency", Format("{:.2f}", this.Config.Transparency))
         this.myTransUD := this.Gui.Add("UpDown", "-2 Range0-20", Round(this.Config.Transparency / 0.05))
-        this.myTransUD.OnEvent("Change", ObjBindMethod(this, "OnTransChange"))
+        this.myTransUD.OnEvent("Change", (ctrl, *) => this.OnTransChange(ctrl))
 
         this.myBtnUndoTrans := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
-        this.myBtnUndoTrans.OnEvent("Click", ObjBindMethod(this, "OnUndoTrans"))
+        this.myBtnUndoTrans.OnEvent("Click", (*) => this.OnUndoTrans())
 
-        this.WheelBound := ObjBindMethod(this, "HandleMouseWheel")
+        this.WheelBound := (wParam, _1, _2, hwnd, *) => this.HandleMouseWheel(wParam, hwnd)
         OnMessage(0x020A, this.WheelBound)
 
         this.Gui.Add("Text", "xm y+5", "Border Color (HEX, empty for auto):")
         this.myColorEdit := this.Gui.Add("Edit", "xm y+5 w60 vBorderColor", this.origColor)
         this.myColorEdit.LastGood := this.origColor
 
-        this.MoveBound := ObjBindMethod(this, "HandleMouseMove")
+        this.MoveBound := (_1, _2, _3, hwnd, *) => this.HandleMouseMove(hwnd)
         OnMessage(0x0200, this.MoveBound)
 
-        this.myColorEdit.OnEvent("Change", ObjBindMethod(this, "OnColorChange"))
+        this.myColorEdit.OnEvent("Change", (ctrl, *) => this.OnColorChange(ctrl))
 
         myBtnPicker := this.Gui.Add("Button", "x+2 yp w22 h22", "🎨")
-        myBtnPicker.OnEvent("Click", ObjBindMethod(this, "OnColorPick"))
+        myBtnPicker.OnEvent("Click", (*) => this.OnColorPick())
 
         myBtnDropper := this.Gui.Add("Button", "x+2 yp w22 h22", "💉")
-        myBtnDropper.OnEvent("Click", ObjBindMethod(this, "OnColorDrop"))
+        myBtnDropper.OnEvent("Click", (*) => this.OnColorDrop())
 
         this.myBtnUndoColor := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
-        this.myBtnUndoColor.OnEvent("Click", ObjBindMethod(this, "OnUndoColor"))
+        this.myBtnUndoColor.OnEvent("Click", (*) => this.OnUndoColor())
 
         this.myCbAutostart := this.Gui.Add("Checkbox", "xm y+5 h22 vAutostart Checked" this.Config.Autostart, "Run at system startup")
-        this.myCbAutostart.OnEvent("Click", ObjBindMethod(this, "CheckUndoStates"))
+        this.myCbAutostart.OnEvent("Click", (*) => this.CheckUndoStates())
 
         this.myBtnUndoAutostart := this.Gui.Add("Button", "x+0 yp w22 h22 Disabled", "↩")
-        this.myBtnUndoAutostart.OnEvent("Click", ObjBindMethod(this, "OnUndoAutostart"))
+        this.myBtnUndoAutostart.OnEvent("Click", (*) => this.OnUndoAutostart())
 
         myBtnSave := this.Gui.Add("Button", "xm y+5 w80 Default", "Save")
-        myBtnSave.OnEvent("Click", ObjBindMethod(this, "mySaveSettings"))
+        myBtnSave.OnEvent("Click", (*) => this.mySaveSettings())
 
         myBtnCancel := this.Gui.Add("Button", "x+5 yp w80", "Cancel")
-        myBtnCancel.OnEvent("Click", ObjBindMethod(this, "CleanupAndDestroy"))
+        myBtnCancel.OnEvent("Click", (*) => this.CleanupAndDestroy())
 
         this.Gui.Show()
     }
@@ -149,7 +158,7 @@ class mySettingsGui {
         this.CheckUndoStates()
     }
 
-    HandleMouseWheel(wParam, lParam, msg, hwnd) {
+    HandleMouseWheel(wParam, hwnd) {
         if (hwnd == this.myTransEdit.Hwnd || hwnd == this.myTransUD.Hwnd) {
             dir := (wParam << 32 >> 48) > 0 ? 1 : -1
             this.myTransUD.Value += dir
@@ -160,7 +169,7 @@ class mySettingsGui {
         }
     }
 
-    HandleMouseMove(wParam, lParam, msg, hwnd) {
+    HandleMouseMove(hwnd) {
         static lastHwnd := 0
         if (hwnd == lastHwnd)
             return

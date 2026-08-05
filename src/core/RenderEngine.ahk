@@ -1,4 +1,10 @@
 class myRenderEngine {
+    /** @type {myConfigManager} */
+    Config := ""
+
+    /**
+     * @param {myConfigManager} configManager
+     */
     __New(configManager) {
         this.Config := configManager
         this.CacheReq := UIA.CreateCacheRequest(["ControlType", "BoundingRectangle", "IsOffscreen"])
@@ -15,7 +21,7 @@ class myRenderEngine {
         this.gLastVH := 0
         this.IsConfigMode := false
 
-        this.WatchdogBound := ObjBindMethod(this, "RenderWatchdog")
+        this.WatchdogBound := (*) => this.RenderWatchdog()
     }
 
     myUpdateAppearance() {
