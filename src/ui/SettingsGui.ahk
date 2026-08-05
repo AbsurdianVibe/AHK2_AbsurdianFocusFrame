@@ -22,6 +22,7 @@ class mySettingsGui {
         this.lastHue := -1
         this.lastSat := -1
         this.lastHueLum := -1
+        this.lastLumForSat := -1
         this.picW := 300
         this.picH := 40
         this.indW := 10
@@ -209,7 +210,7 @@ class mySettingsGui {
             }
 
             if (changed)
-                this.myUpdateColorSpace(false, true) ; FastTrack
+                this.myUpdateColorSpace()
 
             if !GetKeyState("LButton", "P")
                 break
@@ -243,10 +244,14 @@ class mySettingsGui {
         sb := Round(this.HueBaseB + (szary - this.HueBaseB) * this.SatRatio)
 
         if (!fastTrack) {
-            if (firstRender || this.lastHue != hue) {
-                hBM2 := this.GradientEngine.myRenderSaturation(bufferW, this.picH, this.HueBaseR, this.HueBaseG, this.HueBaseB)
+            if (firstRender || this.lastHue != hue || this.lastLumForSat != this.LumRatio) {
+                lumR := (this.LumRatio < 0.5) ? Round(255 + (this.HueBaseR - 255) * (this.LumRatio / 0.5)) : Round(this.HueBaseR * (1 - ((this.LumRatio - 0.5) / 0.5)))
+                lumG := (this.LumRatio < 0.5) ? Round(255 + (this.HueBaseG - 255) * (this.LumRatio / 0.5)) : Round(this.HueBaseG * (1 - ((this.LumRatio - 0.5) / 0.5)))
+                lumB := (this.LumRatio < 0.5) ? Round(255 + (this.HueBaseB - 255) * (this.LumRatio / 0.5)) : Round(this.HueBaseB * (1 - ((this.LumRatio - 0.5) / 0.5)))
+                hBM2 := this.GradientEngine.myRenderSaturation(bufferW, this.picH, lumR, lumG, lumB)
                 this.GradientEngine.myApplyBitmap(this.picSat.Hwnd, hBM2)
                 this.lastHue := hue
+                this.lastLumForSat := this.LumRatio
             }
             if (firstRender || this.lastSat != this.SatRatio || this.lastHueLum != hue) {
                 hBM3 := this.GradientEngine.myRenderLuminance(bufferW, this.picH, sr, sg, sb)
