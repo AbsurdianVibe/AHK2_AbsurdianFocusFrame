@@ -26,7 +26,8 @@ class mySettingsGui {
         this.picW := 300
         this.picH := 40
         this.indW := 10
-        this.indH := 52
+        this.indH := 54
+        this.indCutHeight := 5
         this.gdiScale := 3
     }
 
@@ -111,28 +112,69 @@ class mySettingsGui {
         this.Gui.GetClientPos(&_x, &_y, &baseCW, &baseCH)
         this.baseCW := baseCW, this.baseCH := baseCH
 
+        bgW := this.picW + 2
+        bgH := this.picH + 2
+        FrameCol := "d3d3d3"
+
+
         ; --- SEKCYJNY COLOR PICKER GDI ---
         this.lblSpec := this.Gui.Add("Text", "ym Section Hidden", "Spectrum:")
-        this.picSpec := this.Gui.Add("Picture", "xs y+7 w" this.picW " h" this.picH " +Border +0x0100 +0xE +0x0040 +0x04000000 Hidden")
-        this.indSpec := this.Gui.Add("Picture", "xp yp w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
+        this.FrameSpec := this.Gui.Add("Text", "xs y+8 w" bgW " h" bgH " +Background" . FrameCol . " +0x04000000 Hidden")
+        this.picSpec := this.Gui.Add("Picture", "xp+1 yp+1 w" this.picW " h" this.picH " +0x0100 +0xE +0x0040 +0x04000000 Hidden")
+        this.indSpec := this.Gui.Add("Picture", "xp-1 yp-1 w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
         this.picSpec.OnEvent("Click", (*) => this.myOnSliderInteract(this.picSpec))
 
         this.lblSat := this.Gui.Add("Text", "xs y+10 Hidden", "Saturation:")
-        this.picSat := this.Gui.Add("Picture", "xs y+7 w" this.picW " h" this.picH " +Border +0x0100 +0xE +0x0040 +0x04000000 Hidden")
-        this.indSat := this.Gui.Add("Picture", "xp yp w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
+        this.FrameSat := this.Gui.Add("Text", "xs y+8 w" bgW " h" bgH " +Background" . FrameCol . " +0x04000000 Hidden")
+        this.picSat := this.Gui.Add("Picture", "xp+1 yp+1 w" this.picW " h" this.picH " +0x0100 +0xE +0x0040 +0x04000000 Hidden")
+        this.indSat := this.Gui.Add("Picture", "xp-1 yp-1 w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
         this.picSat.OnEvent("Click", (*) => this.myOnSliderInteract(this.picSat))
 
         this.lblLum := this.Gui.Add("Text", "xs y+10 h22 +0x0200 Hidden", "Luminance:")
         this.btnLumR := this.Gui.Add("Button", "x+5 yp w22 h22 Hidden", "M")
         this.btnLumR.OnEvent("Click", (*) => this.myResetLuminance())
-        this.picLum := this.Gui.Add("Picture", "xs y+7 w" this.picW " h" this.picH " +Border +0x0100 +0xE +0x0040 +0x04000000 Hidden")
-        this.indLum := this.Gui.Add("Picture", "xp yp w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
+        this.FrameLum := this.Gui.Add("Text", "xs y+8 w" bgW " h" bgH " +Background" . FrameCol . " +0x04000000 Hidden")
+        this.picLum := this.Gui.Add("Picture", "xp+1 yp+1 w" this.picW " h" this.picH " +0x0100 +0xE +0x0040 +0x04000000 Hidden")
+        this.indLum := this.Gui.Add("Picture", "xp-1 yp-1 w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
         this.picLum.OnEvent("Click", (*) => this.myOnSliderInteract(this.picLum))
+
+        this.myApplyRoundedRegion(this.FrameSpec, bgW, bgH, true)
+        this.myApplyRoundedRegion(this.picSpec, this.picW, this.picH)
+        this.myApplyRoundedRegion(this.FrameSat, bgW, bgH, true)
+        this.myApplyRoundedRegion(this.picSat, this.picW, this.picH)
+        this.myApplyRoundedRegion(this.FrameLum, bgW, bgH, true)
+        this.myApplyRoundedRegion(this.picLum, this.picW, this.picH)
 
         this.mySyncSlidersFromHex(this.origColor != "" ? this.origColor : myGetThemeColor())
 
+        this.myApplyIndicatorRegion(this.indSpec)
+        this.myApplyIndicatorRegion(this.indSat)
+        this.myApplyIndicatorRegion(this.indLum)
         this.Gui.Show("AutoSize Hide")
         this.Gui.Show("w" this.baseCW " h" this.baseCH)
+    }
+
+    myApplyRoundedRegion(ctrl, logicalW, logicalH, toBottom := false) {
+        dpiScale := A_ScreenDPI / 96
+        w := Round(logicalW * dpiScale)
+        h := Round(logicalH * dpiScale)
+        radius := Round(6 * dpiScale)
+        hRgn := DllCall("CreateRoundRectRgn", "Int", 0, "Int", 0, "Int", w, "Int", h, "Int", radius, "Int", radius, "Ptr")
+        DllCall("SetWindowRgn", "Ptr", ctrl.Hwnd, "Ptr", hRgn, "Int", 1)
+        if (toBottom)
+            DllCall("SetWindowPos", "Ptr", ctrl.Hwnd, "Ptr", 1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0003) ; HWND_BOTTOM = 1
+    }
+
+    myApplyIndicatorRegion(ctrl) {
+        dpiScale := A_ScreenDPI / 96
+        w := Round(this.indW * dpiScale)
+        h := Round(this.indH * dpiScale)
+        arrowH := Round(this.indCutHeight * dpiScale)
+        hRgnTop := DllCall("CreateRectRgn", "Int", 0, "Int", 0, "Int", w, "Int", arrowH, "Ptr")
+        hRgnBottom := DllCall("CreateRectRgn", "Int", 0, "Int", h - arrowH, "Int", w, "Int", h, "Ptr")
+        DllCall("CombineRgn", "Ptr", hRgnTop, "Ptr", hRgnTop, "Ptr", hRgnBottom, "Int", 2)
+        DllCall("SetWindowRgn", "Ptr", ctrl.Hwnd, "Ptr", hRgnTop, "Int", 1)
+        DllCall("SetWindowPos", "Ptr", ctrl.Hwnd, "Ptr", 0, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0003) ; HWND_TOP
     }
 
     myTogglePicker() {
@@ -140,14 +182,14 @@ class mySettingsGui {
         w := 180, h := 20
         if (this.PickerVisible) {
             this.myUpdateColorSpace(true)
-            this.lblSpec.Visible := true, this.picSpec.Visible := true, this.indSpec.Visible := true
-            this.lblSat.Visible := true, this.picSat.Visible := true, this.indSat.Visible := true
-            this.lblLum.Visible := true, this.picLum.Visible := true, this.indLum.Visible := true, this.btnLumR.Visible := true
+            this.lblSpec.Visible := true, this.FrameSpec.Visible := true, this.picSpec.Visible := true, this.indSpec.Visible := true
+            this.lblSat.Visible := true, this.FrameSat.Visible := true, this.picSat.Visible := true, this.indSat.Visible := true
+            this.lblLum.Visible := true, this.FrameLum.Visible := true, this.picLum.Visible := true, this.indLum.Visible := true, this.btnLumR.Visible := true
             this.Gui.Show("AutoSize")
         } else {
-            this.lblSpec.Visible := false, this.picSpec.Visible := false, this.indSpec.Visible := false
-            this.lblSat.Visible := false, this.picSat.Visible := false, this.indSat.Visible := false
-            this.lblLum.Visible := false, this.picLum.Visible := false, this.indLum.Visible := false, this.btnLumR.Visible := false
+            this.lblSpec.Visible := false, this.FrameSpec.Visible := false, this.picSpec.Visible := false, this.indSpec.Visible := false
+            this.lblSat.Visible := false, this.FrameSat.Visible := false, this.picSat.Visible := false, this.indSat.Visible := false
+            this.lblLum.Visible := false, this.FrameLum.Visible := false, this.picLum.Visible := false, this.indLum.Visible := false, this.btnLumR.Visible := false
             this.Gui.Show("w" this.baseCW " h" this.baseCH)
         }
     }
