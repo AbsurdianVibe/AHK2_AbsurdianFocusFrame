@@ -7,7 +7,7 @@ class myHookManager {
         OnMessage(0x001A, this.ThemeChangeBound)
 
         this.HideBorderBound := ObjBindMethod(this, "HideNativeBorderEvent")
-        this.FocusHook := DllCall("SetWinEventHook", "UInt", 0x8005, "UInt", 0x8005, "Ptr", 0, "Ptr", CallbackCreate(this.HideBorderBound, "F", 7), "UInt", 0, "UInt", 0, "UInt", 0)
+        this.FocusHook := DllCall("SetWinEventHook", "UInt", 0x8005, "UInt", 0x8009, "Ptr", 0, "Ptr", CallbackCreate(this.HideBorderBound, "F", 7), "UInt", 0, "UInt", 0, "UInt", 0)
     }
 
     myThemeChangeHook(wParam, lParam, msg, hwnd) {
