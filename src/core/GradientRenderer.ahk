@@ -57,4 +57,34 @@ class myGradientRenderer {
             { r: Round(r + (szary - r) * i), g: Round(g + (szary - g) * i), b: Round(b + (szary - b) * i) }
         ))
     }
+
+    myRenderIndicatorArrows(w, h, scale := 1.0) {
+        realW := Round(w * scale)
+        realH := Round(h * scale)
+        dane := this.myInitBitmap(realW, realH)
+        cx := realW // 2
+        
+        arrowSize := Round(5 * scale)
+        
+        myDrawRow(y, dx) {
+            Loop (dx * 2 + 1) {
+                x := (cx - dx) + (A_Index - 1)
+                if (x >= 0 && x < realW) {
+                    offset := (y * realW + x) * 4
+                    NumPut("UInt", 0xFF000000, dane.ptr, offset)
+                }
+            }
+        }
+        
+        Loop arrowSize {
+            y := A_Index - 1
+            myDrawRow(y, (arrowSize - 1) - y)
+        }
+        
+        Loop arrowSize {
+            dy := A_Index - 1
+            myDrawRow(realH - arrowSize + dy, dy)
+        }
+        return dane.hbm
+    }
 }

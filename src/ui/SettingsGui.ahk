@@ -25,7 +25,7 @@ class mySettingsGui {
         this.picW := 300
         this.picH := 40
         this.indW := 10
-        this.indH := 60
+        this.indH := 52
         this.gdiScale := 3
     }
 
@@ -112,20 +112,20 @@ class mySettingsGui {
 
         ; --- SEKCYJNY COLOR PICKER GDI ---
         this.lblSpec := this.Gui.Add("Text", "ym Section Hidden", "Spectrum:")
-        this.picSpec := this.Gui.Add("Picture", "xs y+5 w" this.picW " h" this.picH " +Border +0x0100 +0xE +0x0040 +0x04000000 Hidden")
-        this.indSpec := this.Gui.Add("text", "xp yp w" this.indW " h" this.indH " +0x04000000 Hidden +Border")
+        this.picSpec := this.Gui.Add("Picture", "xs y+7 w" this.picW " h" this.picH " +Border +0x0100 +0xE +0x0040 +0x04000000 Hidden")
+        this.indSpec := this.Gui.Add("Picture", "xp yp w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
         this.picSpec.OnEvent("Click", (*) => this.myOnSliderInteract(this.picSpec))
 
         this.lblSat := this.Gui.Add("Text", "xs y+10 Hidden", "Saturation:")
-        this.picSat := this.Gui.Add("Picture", "xs y+5 w" this.picW " h" this.picH " +Border +0x0100 +0xE +0x0040 +0x04000000 Hidden")
-        this.indSat := this.Gui.Add("text", "xp yp w" this.indW " h" this.indH " +0x04000000 Hidden +Border")
+        this.picSat := this.Gui.Add("Picture", "xs y+7 w" this.picW " h" this.picH " +Border +0x0100 +0xE +0x0040 +0x04000000 Hidden")
+        this.indSat := this.Gui.Add("Picture", "xp yp w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
         this.picSat.OnEvent("Click", (*) => this.myOnSliderInteract(this.picSat))
 
         this.lblLum := this.Gui.Add("Text", "xs y+10 h22 +0x0200 Hidden", "Luminance:")
         this.btnLumR := this.Gui.Add("Button", "x+5 yp w22 h22 Hidden", "M")
         this.btnLumR.OnEvent("Click", (*) => this.myResetLuminance())
-        this.picLum := this.Gui.Add("Picture", "xs y+5 w" this.picW " h" this.picH " +Border +0x0100 +0xE +0x0040 +0x04000000 Hidden")
-        this.indLum := this.Gui.Add("text", "xp yp w" this.indW " h" this.indH " +0x04000000 Hidden +Border")
+        this.picLum := this.Gui.Add("Picture", "xs y+7 w" this.picW " h" this.picH " +Border +0x0100 +0xE +0x0040 +0x04000000 Hidden")
+        this.indLum := this.Gui.Add("Picture", "xp yp w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
         this.picLum.OnEvent("Click", (*) => this.myOnSliderInteract(this.picLum))
 
         this.mySyncSlidersFromHex(this.origColor != "" ? this.origColor : myGetThemeColor())
@@ -163,7 +163,7 @@ class mySettingsGui {
         baseCoord := cX
 
         if (scrollDir != 0) {
-            step := 0.02
+            step := 0.005
             ratio := (ctrlObj == this.picSpec) ? this.HueRatio : ((ctrlObj == this.picSat) ? this.SatRatio : this.LumRatio)
             ratio += (scrollDir * step)
 
@@ -227,6 +227,14 @@ class mySettingsGui {
         if (firstRender) {
             hBM1 := this.GradientEngine.myRenderSpectrum(bufferW, this.picH)
             this.GradientEngine.myApplyBitmap(this.picSpec.Hwnd, hBM1)
+
+            dpiScale := A_ScreenDPI / 96
+            hArr1 := this.GradientEngine.myRenderIndicatorArrows(this.indW, this.indH, dpiScale)
+            this.GradientEngine.myApplyBitmap(this.indSpec.Hwnd, hArr1)
+            hArr2 := this.GradientEngine.myRenderIndicatorArrows(this.indW, this.indH, dpiScale)
+            this.GradientEngine.myApplyBitmap(this.indSat.Hwnd, hArr2)
+            hArr3 := this.GradientEngine.myRenderIndicatorArrows(this.indW, this.indH, dpiScale)
+            this.GradientEngine.myApplyBitmap(this.indLum.Hwnd, hArr3)
         }
 
         szary := Round((this.HueBaseR * 0.299) + (this.HueBaseG * 0.587) + (this.HueBaseB * 0.114))
