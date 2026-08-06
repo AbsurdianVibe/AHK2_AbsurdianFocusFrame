@@ -160,7 +160,8 @@ class mySettingsGui {
         h := Round(logicalH * dpiScale)
         radius := Round(6 * dpiScale)
         hRgn := DllCall("CreateRoundRectRgn", "Int", 0, "Int", 0, "Int", w, "Int", h, "Int", radius, "Int", radius, "Ptr")
-        DllCall("SetWindowRgn", "Ptr", ctrl.Hwnd, "Ptr", hRgn, "Int", 1)
+        if (!DllCall("SetWindowRgn", "Ptr", ctrl.Hwnd, "Ptr", hRgn, "Int", 1))
+            DllCall("DeleteObject", "Ptr", hRgn)
         if (toBottom)
             DllCall("SetWindowPos", "Ptr", ctrl.Hwnd, "Ptr", 1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0003) ; HWND_BOTTOM = 1
     }
@@ -173,7 +174,9 @@ class mySettingsGui {
         hRgnTop := DllCall("CreateRectRgn", "Int", 0, "Int", 0, "Int", w, "Int", arrowH, "Ptr")
         hRgnBottom := DllCall("CreateRectRgn", "Int", 0, "Int", h - arrowH, "Int", w, "Int", h, "Ptr")
         DllCall("CombineRgn", "Ptr", hRgnTop, "Ptr", hRgnTop, "Ptr", hRgnBottom, "Int", 2)
-        DllCall("SetWindowRgn", "Ptr", ctrl.Hwnd, "Ptr", hRgnTop, "Int", 1)
+        if (!DllCall("SetWindowRgn", "Ptr", ctrl.Hwnd, "Ptr", hRgnTop, "Int", 1))
+            DllCall("DeleteObject", "Ptr", hRgnTop)
+        DllCall("DeleteObject", "Ptr", hRgnBottom)
         DllCall("SetWindowPos", "Ptr", ctrl.Hwnd, "Ptr", 0, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0003) ; HWND_TOP
     }
 
@@ -466,6 +469,23 @@ class mySettingsGui {
         OnMessage(0x020A, this.WheelBound, 0)
         try OnMessage(0x0200, this.MoveBound, 0)
         ToolTip()
+
+        this.GradientEngine.myApplyBitmap(this.picSpec.Hwnd, 0)
+        this.GradientEngine.myApplyBitmap(this.picSat.Hwnd, 0)
+        this.GradientEngine.myApplyBitmap(this.picLum.Hwnd, 0)
+        this.GradientEngine.myApplyBitmap(this.indSpec.Hwnd, 0)
+        this.GradientEngine.myApplyBitmap(this.indSat.Hwnd, 0)
+        this.GradientEngine.myApplyBitmap(this.indLum.Hwnd, 0)
+
+        DllCall("SetWindowRgn", "Ptr", this.FrameSpec.Hwnd, "Ptr", 0, "Int", 0)
+        DllCall("SetWindowRgn", "Ptr", this.picSpec.Hwnd, "Ptr", 0, "Int", 0)
+        DllCall("SetWindowRgn", "Ptr", this.FrameSat.Hwnd, "Ptr", 0, "Int", 0)
+        DllCall("SetWindowRgn", "Ptr", this.picSat.Hwnd, "Ptr", 0, "Int", 0)
+        DllCall("SetWindowRgn", "Ptr", this.FrameLum.Hwnd, "Ptr", 0, "Int", 0)
+        DllCall("SetWindowRgn", "Ptr", this.picLum.Hwnd, "Ptr", 0, "Int", 0)
+        DllCall("SetWindowRgn", "Ptr", this.indSpec.Hwnd, "Ptr", 0, "Int", 0)
+        DllCall("SetWindowRgn", "Ptr", this.indSat.Hwnd, "Ptr", 0, "Int", 0)
+        DllCall("SetWindowRgn", "Ptr", this.indLum.Hwnd, "Ptr", 0, "Int", 0)
 
         this.Renderer.FocusGui.BackColor := (this.Config.BorderColor == "" ? myGetThemeColor() : this.Config.BorderColor)
         WinSetTransparent(Round(255 * this.Config.Transparency), this.Renderer.FocusGui.Hwnd)

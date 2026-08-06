@@ -24,9 +24,15 @@ class myGradientRenderer {
     }
 
     myApplyBitmap(ctrlHwnd, hBM) {
-        hOld := SendMessage(0x172, 0, hBM, ctrlHwnd)
-        if (hOld)
-            DllCall("DeleteObject", "Ptr", hOld)
+        hReturned := SendMessage(0x172, 0, hBM, ctrlHwnd) ; STM_SETIMAGE
+        if (hReturned)
+            DllCall("DeleteObject", "Ptr", hReturned)
+        
+        if (hBM) {
+            hNow := SendMessage(0x173, 0, 0, ctrlHwnd) ; STM_GETIMAGE
+            if (hNow && hNow != hBM)
+                DllCall("DeleteObject", "Ptr", hBM)
+        }
     }
 
     myRenderHorizontalGradient(w, h, colorCallback) {

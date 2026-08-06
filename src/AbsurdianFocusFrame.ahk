@@ -4,7 +4,7 @@
 ;@Ahk2Exe-SetCompanyName AbsurdianVibe
 ;@Ahk2Exe-SetDescription Configurable keyboard focus border for Desktop and Windows Explorer
 ;@Ahk2Exe-SetCopyright Copyright (c) 2026 AbsurdianVibe
-;@Ahk2Exe-SetVersion 1.1.4
+;@Ahk2Exe-SetVersion 1.1.5
 ;@Ahk2Exe-SetProductName Absurdian Focus Frame
 ;@Ahk2Exe-SetLanguage 0x0409 ; English (US)
 
