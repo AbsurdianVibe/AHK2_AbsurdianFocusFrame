@@ -30,6 +30,8 @@ class mySettingsGui {
         this.indCutHeight := 5
         this.gdiScale := 3
         this.grayColor := "d3d3d3"
+        this.HoverTipBound := this.ShowHoverTip.Bind(this)
+        this.CurrentTip := ""
     }
 
     myShow() {
@@ -103,10 +105,10 @@ class mySettingsGui {
 
         this.myColorEdit.OnEvent("Change", (ctrl, *) => this.OnColorChange(ctrl))
 
-        myBtnPicker := this.mySmallButton("🎨")
+        myBtnPicker := this.mySmallButton("🎨", "Manual color selection")
         myBtnPicker.OnEvent("Click", (*) => this.myTogglePicker())
 
-        myBtnDrop := this.mySmallButton("💉")
+        myBtnDrop := this.mySmallButton("💉", "Screen color sampler")
         myBtnDrop.OnEvent("Click", (*) => this.OnColorDrop())
         this.myBtnUndoColor := this.mySmallButton()
         this.myBtnUndoColor.OnEvent("Click", (*) => this.OnUndoColor())
@@ -150,7 +152,7 @@ class mySettingsGui {
         this.picSat.OnEvent("Click", (*) => this.myOnSliderInteract(this.picSat))
 
         this.lblLum := this.Gui.Add("Text", "xs y+10 h22 +0x0200 Hidden", "Luminance:")
-        this.btnLumR := this.mySmallButton("M")
+        this.btnLumR := this.mySmallButton("M", "Reset luminance")
         this.btnLumR.OnEvent("Click", (*) => this.myResetLuminance())
         this.FrameLum := this.Gui.Add("Text", "xs y+8 w" bgW " h" bgH " +Background" . this.grayColor . " +0x04000000 Hidden")
         this.picLum := this.Gui.Add("Picture", "xp+1 yp+1 w" this.picW " h" this.picH " +0x0100 +0xE +0x0040 +0x04000000 Hidden")
@@ -185,8 +187,11 @@ class mySettingsGui {
             DllCall("SetWindowPos", "Ptr", ctrl.Hwnd, "Ptr", 1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0003) ; HWND_BOTTOM = 1
     }
 
-    mySmallButton(symbol := "↩") {
-        return this.Gui.Add("Button", "x+2 yp w22 h22", symbol)
+    mySmallButton(symbol := "↩", customTip := "Undo changes") {
+        btn := this.Gui.Add("Button", "x+2 yp w22 h22", symbol)
+        if (customTip != "")
+            btn.myCustomTooltip := customTip
+        return btn
     }
 
     myAddSeparator() {
@@ -311,15 +316,15 @@ class mySettingsGui {
         }
 
         szary := Round((this.HueBaseR * 0.299) + (this.HueBaseG * 0.587) + (this.HueBaseB * 0.114))
-        sr := Round(this.HueBaseR + (szary - this.HueBaseR) * this.SatRatio)
-        sg := Round(this.HueBaseG + (szary - this.HueBaseG) * this.SatRatio)
-        sb := Round(this.HueBaseB + (szary - this.HueBaseB) * this.SatRatio)
+        sr := Round(szary + (this.HueBaseR - szary) * this.SatRatio)
+        sg := Round(szary + (this.HueBaseG - szary) * this.SatRatio)
+        sb := Round(szary + (this.HueBaseB - szary) * this.SatRatio)
 
         if (!fastTrack) {
             if (firstRender || this.lastHue != hue || this.lastLumForSat != this.LumRatio) {
-                lumR := (this.LumRatio < 0.5) ? Round(255 + (this.HueBaseR - 255) * (this.LumRatio / 0.5)) : Round(this.HueBaseR * (1 - ((this.LumRatio - 0.5) / 0.5)))
-                lumG := (this.LumRatio < 0.5) ? Round(255 + (this.HueBaseG - 255) * (this.LumRatio / 0.5)) : Round(this.HueBaseG * (1 - ((this.LumRatio - 0.5) / 0.5)))
-                lumB := (this.LumRatio < 0.5) ? Round(255 + (this.HueBaseB - 255) * (this.LumRatio / 0.5)) : Round(this.HueBaseB * (1 - ((this.LumRatio - 0.5) / 0.5)))
+                lumR := (this.LumRatio < 0.5) ? Round(this.HueBaseR * (this.LumRatio / 0.5)) : Round(this.HueBaseR + (255 - this.HueBaseR) * ((this.LumRatio - 0.5) / 0.5))
+                lumG := (this.LumRatio < 0.5) ? Round(this.HueBaseG * (this.LumRatio / 0.5)) : Round(this.HueBaseG + (255 - this.HueBaseG) * ((this.LumRatio - 0.5) / 0.5))
+                lumB := (this.LumRatio < 0.5) ? Round(this.HueBaseB * (this.LumRatio / 0.5)) : Round(this.HueBaseB + (255 - this.HueBaseB) * ((this.LumRatio - 0.5) / 0.5))
                 hBM2 := this.GradientEngine.myRenderSaturation(bufferW, this.picH, lumR, lumG, lumB)
                 this.GradientEngine.myApplyBitmap(this.picSat.Hwnd, hBM2)
                 this.lastHue := hue
@@ -350,14 +355,14 @@ class mySettingsGui {
         i := this.LumRatio
         if (i < 0.5) {
             p := i / 0.5
-            fr := Round(255 + (sr - 255) * p)
-            fg := Round(255 + (sg - 255) * p)
-            fb := Round(255 + (sb - 255) * p)
+            fr := Round(sr * p)
+            fg := Round(sg * p)
+            fb := Round(sb * p)
         } else {
             p := (i - 0.5) / 0.5
-            fr := Round(sr * (1 - p))
-            fg := Round(sg * (1 - p))
-            fb := Round(sb * (1 - p))
+            fr := Round(sr + (255 - sr) * p)
+            fg := Round(sg + (255 - sg) * p)
+            fb := Round(sb + (255 - sb) * p)
         }
 
         hex := Format("{:02x}{:02x}{:02x}", fr, fg, fb)
@@ -483,10 +488,27 @@ class mySettingsGui {
         if (hwnd == lastHwnd)
             return
         lastHwnd := hwnd
-        if (hwnd == this.myColorEdit.Hwnd)
-            ToolTip("HEX value or empty for auto-theme.")
-        else
-            ToolTip()
+
+        SetTimer(this.HoverTipBound, 0)
+        ToolTip()
+
+        tryCtrl := ""
+        try tryCtrl := GuiCtrlFromHwnd(hwnd)
+
+        tipText := ""
+        if (tryCtrl && tryCtrl.HasOwnProp("myCustomTooltip"))
+            tipText := tryCtrl.myCustomTooltip
+        else if (hwnd == this.myColorEdit.Hwnd)
+            tipText := "HEX value or empty for auto-theme."
+
+        if (tipText != "") {
+            this.CurrentTip := tipText
+            SetTimer(this.HoverTipBound, -400)
+        }
+    }
+
+    ShowHoverTip() {
+        ToolTip(this.CurrentTip)
     }
 
     CheckUndoStates(*) {

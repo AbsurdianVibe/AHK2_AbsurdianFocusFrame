@@ -78,7 +78,7 @@ myHexToHsl(hexColor) {
             h := (r - g) / d + 4
         h /= 6
     }
-    return { h: h, s: 1.0 - s, l: 1.0 - l }
+    return { h: h, s: s, l: l }
 }
 
 /**

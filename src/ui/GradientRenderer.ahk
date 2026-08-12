@@ -60,7 +60,7 @@ class myGradientRenderer {
 
     myRenderLuminance(w, h, r, g, b) {
         return this.myRenderHorizontalGradient(w, h, (x, width) => (
-            i := (x / (width - 1)),
+            i := 1.0 - (x / (width - 1)),
             (i < 0.5) ? (
                 p := i / 0.5, { r: Round(255 + (r - 255) * p), g: Round(255 + (g - 255) * p), b: Round(255 + (b - 255) * p) }
             ) : (
@@ -72,7 +72,7 @@ class myGradientRenderer {
     myRenderSaturation(w, h, r, g, b) {
         szary := Round((r * 0.299) + (g * 0.587) + (b * 0.114))
         return this.myRenderHorizontalGradient(w, h, (x, width) => (
-            i := (x / (width - 1)), { r: Round(r + (szary - r) * i), g: Round(g + (szary - g) * i), b: Round(b + (szary - b) * i) }
+            i := 1.0 - (x / (width - 1)), { r: Round(r + (szary - r) * i), g: Round(g + (szary - g) * i), b: Round(b + (szary - b) * i) }
         ))
     }
 
