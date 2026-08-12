@@ -29,6 +29,7 @@ class mySettingsGui {
         this.indH := 54
         this.indCutHeight := 5
         this.gdiScale := 3
+        this.grayColor := "d3d3d3"
     }
 
     myShow() {
@@ -46,7 +47,8 @@ class mySettingsGui {
         this.Gui := Gui("-MinimizeBox -MaximizeBox", "Absurdian Focus Frame")
         this.PickerVisible := false
         this.Gui.MarginX := 15
-        this.Gui.MarginY := 15
+        this.Ygap := 6
+        this.Gui.MarginY := this.Ygap
 
         this.origThick := this.Config.BorderThickness
         this.origTrans := Format("{:.2f}", this.Config.Transparency)
@@ -56,36 +58,44 @@ class mySettingsGui {
 
         this.Gui.OnEvent("Close", (*) => this.myCleanupAndDestroy())
 
-        myBtnInfo := this.Gui.Add("Button", "xm y5", "ℹ️")
+        myBtnInfo := this.Gui.Add("Button", "xm y" this.Ygap, "ℹ️ About program")
         myBtnInfo.OnEvent("Click", (*) => this.ShowInfoDialog())
 
-        this.Gui.Add("Text", "xm y+5", "Border Thickness (px):")
-        this.myThickEdit := this.Gui.Add("Edit", "xm y+5 w80 vBorderThickness", this.Config.BorderThickness)
+        this.myAddSeparator()
+
+        this.Gui.Add("Text", "xm y+" this.Ygap, "Border Thickness (px):")
+        this.myThickEdit := this.Gui.Add("Edit", "xm y+" this.Ygap " w80 vBorderThickness", this.Config.BorderThickness)
         this.myThickUD := this.Gui.Add("UpDown", "Range1-4", this.Config.BorderThickness)
         this.myThickUD.OnEvent("Change", (ctrl, *) => this.OnThickChange(ctrl))
 
-        this.myBtnUndoThick := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
+        this.myBtnUndoThick := this.mySmallButton()
         this.myBtnUndoThick.OnEvent("Click", (*) => this.OnUndoThick())
 
-        this.myCbRounded := this.Gui.Add("CheckBox", "xm y+5 h22 vUseRoundedCorners", "Rounded Corners")
+        this.myAddSeparator()
+
+        this.myCbRounded := this.Gui.Add("CheckBox", "xm y+" this.Ygap " h22 vUseRoundedCorners", "Rounded Corners")
         this.myCbRounded.Value := this.origRounded
         this.myCbRounded.OnEvent("Click", (ctrl, *) => this.OnRoundedChange())
-        this.myBtnUndoRounded := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
+        this.myBtnUndoRounded := this.mySmallButton()
         this.myBtnUndoRounded.OnEvent("Click", (*) => this.OnUndoRounded())
 
+        this.myAddSeparator()
+
         this.Gui.Add("Text", "xm y+5", "Transparency (0.0 - 1.0):")
-        this.myTransEdit := this.Gui.Add("Edit", "xm y+5 w60 vTransparency", Format("{:.2f}", this.Config.Transparency))
+        this.myTransEdit := this.Gui.Add("Edit", "xm y+" this.Ygap " w60 vTransparency", Format("{:.2f}", this.Config.Transparency))
         this.myTransUD := this.Gui.Add("UpDown", "-2 Range0-20", Round(this.Config.Transparency / 0.05))
         this.myTransUD.OnEvent("Change", (ctrl, *) => this.OnTransChange(ctrl))
 
-        this.myBtnUndoTrans := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
+        this.myBtnUndoTrans := this.mySmallButton()
         this.myBtnUndoTrans.OnEvent("Click", (*) => this.OnUndoTrans())
 
         this.WheelBound := (wParam, _1, _2, hwnd, *) => this.HandleMouseWheel(wParam, hwnd)
         OnMessage(0x020A, this.WheelBound)
 
-        this.Gui.Add("Text", "xm y+5", "Border Color (HEX, empty for auto):")
-        this.myColorEdit := this.Gui.Add("Edit", "xm y+5 w60 vBorderColor", this.origColor)
+        this.myAddSeparator()
+
+        this.Gui.Add("Text", "xm y+" this.Ygap, "Border Color:")
+        this.myColorEdit := this.Gui.Add("Edit", "xm y+" this.Ygap " w60 vBorderColor", this.origColor)
         this.myColorEdit.LastGood := this.origColor
 
         this.MoveBound := (_1, _2, _3, hwnd, *) => this.HandleMouseMove(hwnd)
@@ -93,23 +103,27 @@ class mySettingsGui {
 
         this.myColorEdit.OnEvent("Change", (ctrl, *) => this.OnColorChange(ctrl))
 
-        myBtnPicker := this.Gui.Add("Button", "x+2 yp w22 h22", "🎨")
+        myBtnPicker := this.mySmallButton("🎨")
         myBtnPicker.OnEvent("Click", (*) => this.myTogglePicker())
 
-        myBtnDrop := this.Gui.Add("Button", "x+2 yp w22 h22", "💉")
+        myBtnDrop := this.mySmallButton("💉")
         myBtnDrop.OnEvent("Click", (*) => this.OnColorDrop())
-        this.myBtnUndoColor := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
+        this.myBtnUndoColor := this.mySmallButton()
         this.myBtnUndoColor.OnEvent("Click", (*) => this.OnUndoColor())
 
-        this.myCbAutostart := this.Gui.Add("CheckBox", "xm y+5 h22 vAutostart", "Enable Autostart")
+        this.myAddSeparator()
+
+        this.myCbAutostart := this.Gui.Add("CheckBox", "xm y+" this.Ygap " h22 vAutostart", "Enable Autostart")
         this.myCbAutostart.Value := this.origAutostart
         this.myCbAutostart.OnEvent("Click", (ctrl, *) => this.CheckUndoStates())
-        this.myBtnUndoAutostart := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
+        this.myBtnUndoAutostart := this.mySmallButton()
         this.myBtnUndoAutostart.OnEvent("Click", (*) => this.OnUndoAutostart())
 
-        btnSave := this.Gui.Add("Button", "xm y+20 w100 Default", "Save")
+        this.myAddSeparator()
+
+        btnSave := this.Gui.Add("Button", "xm y+" this.Ygap " w60 Default", "Save")
         btnSave.OnEvent("Click", (*) => this.mySaveSettings())
-        btnCancel := this.Gui.Add("Button", "x+10 yp w100", "Cancel")
+        btnCancel := this.Gui.Add("Button", "x+10 yp w60", "Cancel")
         btnCancel.OnEvent("Click", (*) => this.myCleanupAndDestroy())
 
         this.CheckUndoStates()
@@ -120,26 +134,25 @@ class mySettingsGui {
 
         bgW := this.picW + 2
         bgH := this.picH + 2
-        FrameCol := "d3d3d3"
 
 
         ; --- SEKCYJNY COLOR PICKER GDI ---
         this.lblSpec := this.Gui.Add("Text", "ym Section Hidden", "Spectrum:")
-        this.FrameSpec := this.Gui.Add("Text", "xs y+8 w" bgW " h" bgH " +Background" . FrameCol . " +0x04000000 Hidden")
+        this.FrameSpec := this.Gui.Add("Text", "xs y+8 w" bgW " h" bgH " +Background" . this.grayColor . " +0x04000000 Hidden")
         this.picSpec := this.Gui.Add("Picture", "xp+1 yp+1 w" this.picW " h" this.picH " +0x0100 +0xE +0x0040 +0x04000000 Hidden")
         this.indSpec := this.Gui.Add("Picture", "xp-1 yp-1 w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
         this.picSpec.OnEvent("Click", (*) => this.myOnSliderInteract(this.picSpec))
 
         this.lblSat := this.Gui.Add("Text", "xs y+10 Hidden", "Saturation:")
-        this.FrameSat := this.Gui.Add("Text", "xs y+8 w" bgW " h" bgH " +Background" . FrameCol . " +0x04000000 Hidden")
+        this.FrameSat := this.Gui.Add("Text", "xs y+8 w" bgW " h" bgH " +Background" . this.grayColor . " +0x04000000 Hidden")
         this.picSat := this.Gui.Add("Picture", "xp+1 yp+1 w" this.picW " h" this.picH " +0x0100 +0xE +0x0040 +0x04000000 Hidden")
         this.indSat := this.Gui.Add("Picture", "xp-1 yp-1 w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
         this.picSat.OnEvent("Click", (*) => this.myOnSliderInteract(this.picSat))
 
         this.lblLum := this.Gui.Add("Text", "xs y+10 h22 +0x0200 Hidden", "Luminance:")
-        this.btnLumR := this.Gui.Add("Button", "x+5 yp w22 h22 Hidden", "M")
+        this.btnLumR := this.mySmallButton("M")
         this.btnLumR.OnEvent("Click", (*) => this.myResetLuminance())
-        this.FrameLum := this.Gui.Add("Text", "xs y+8 w" bgW " h" bgH " +Background" . FrameCol . " +0x04000000 Hidden")
+        this.FrameLum := this.Gui.Add("Text", "xs y+8 w" bgW " h" bgH " +Background" . this.grayColor . " +0x04000000 Hidden")
         this.picLum := this.Gui.Add("Picture", "xp+1 yp+1 w" this.picW " h" this.picH " +0x0100 +0xE +0x0040 +0x04000000 Hidden")
         this.indLum := this.Gui.Add("Picture", "xp-1 yp-1 w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
         this.picLum.OnEvent("Click", (*) => this.myOnSliderInteract(this.picLum))
@@ -170,6 +183,14 @@ class mySettingsGui {
             DllCall("DeleteObject", "Ptr", hRgn)
         if (toBottom)
             DllCall("SetWindowPos", "Ptr", ctrl.Hwnd, "Ptr", 1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0003) ; HWND_BOTTOM = 1
+    }
+
+    mySmallButton(symbol := "↩") {
+        return this.Gui.Add("Button", "x+2 yp w22 h22", symbol)
+    }
+
+    myAddSeparator() {
+        this.Gui.Add("Text", "xm-5 ym y+" this.Ygap " h1 w140 Background" . this.grayColor)
     }
 
     myApplyIndicatorRegion(ctrl) {
@@ -463,7 +484,7 @@ class mySettingsGui {
             return
         lastHwnd := hwnd
         if (hwnd == this.myColorEdit.Hwnd)
-            ToolTip("Leave empty for auto-theme.")
+            ToolTip("HEX value or empty for auto-theme.")
         else
             ToolTip()
     }
