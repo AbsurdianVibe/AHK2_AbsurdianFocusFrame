@@ -52,6 +52,7 @@ class mySettingsGui {
         this.origTrans := Format("{:.2f}", this.Config.Transparency)
         this.origColor := IniRead(this.Config.IniPath, "Settings", "BorderColor", "")
         this.origAutostart := this.Config.Autostart
+        this.origRounded := this.Config.UseRoundedCorners
 
         this.Gui.OnEvent("Close", (*) => this.myCleanupAndDestroy())
 
@@ -65,6 +66,12 @@ class mySettingsGui {
 
         this.myBtnUndoThick := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
         this.myBtnUndoThick.OnEvent("Click", (*) => this.OnUndoThick())
+
+        this.myCbRounded := this.Gui.Add("CheckBox", "xm y+5 h22 vUseRoundedCorners", "Rounded Corners")
+        this.myCbRounded.Value := this.origRounded
+        this.myCbRounded.OnEvent("Click", (ctrl, *) => this.OnRoundedChange())
+        this.myBtnUndoRounded := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
+        this.myBtnUndoRounded.OnEvent("Click", (*) => this.OnUndoRounded())
 
         this.Gui.Add("Text", "xm y+5", "Transparency (0.0 - 1.0):")
         this.myTransEdit := this.Gui.Add("Edit", "xm y+5 w60 vTransparency", Format("{:.2f}", this.Config.Transparency))
@@ -94,11 +101,10 @@ class mySettingsGui {
         this.myBtnUndoColor := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
         this.myBtnUndoColor.OnEvent("Click", (*) => this.OnUndoColor())
 
-        this.Gui.Add("Text", "xm y+15", "Launch with Windows:")
-        this.myCbAutostart := this.Gui.Add("CheckBox", "xm y+5 vAutostart", "Enable Autostart")
+        this.myCbAutostart := this.Gui.Add("CheckBox", "xm y+5 h22 vAutostart", "Enable Autostart")
         this.myCbAutostart.Value := this.origAutostart
         this.myCbAutostart.OnEvent("Click", (ctrl, *) => this.CheckUndoStates())
-        this.myBtnUndoAutostart := this.Gui.Add("Button", "x+10 yp w22 h22 Disabled", "↩")
+        this.myBtnUndoAutostart := this.Gui.Add("Button", "x+2 yp w22 h22 Disabled", "↩")
         this.myBtnUndoAutostart.OnEvent("Click", (*) => this.OnUndoAutostart())
 
         btnSave := this.Gui.Add("Button", "xm y+20 w100 Default", "Save")
@@ -351,13 +357,13 @@ class mySettingsGui {
     }
 
     OnThickChange(ctrl, *) {
-        this.Renderer.myApplyBorderRegion(ctrl.Value, this.Renderer.gLastW, this.Renderer.gLastH, this.Renderer.gLastVX, this.Renderer.gLastVY, this.Renderer.gLastVW, this.Renderer.gLastVH)
+        this.Renderer.myApplyBorderRegion(ctrl.Value, this.Renderer.gLastW, this.Renderer.gLastH, this.Renderer.gLastVX, this.Renderer.gLastVY, this.Renderer.gLastVW, this.Renderer.gLastVH, this.myCbRounded.Value)
         this.CheckUndoStates()
     }
 
     OnUndoThick(*) {
         this.myThickEdit.Value := this.origThick
-        this.Renderer.myApplyBorderRegion(this.origThick, this.Renderer.gLastW, this.Renderer.gLastH, this.Renderer.gLastVX, this.Renderer.gLastVY, this.Renderer.gLastVW, this.Renderer.gLastVH)
+        this.Renderer.myApplyBorderRegion(this.origThick, this.Renderer.gLastW, this.Renderer.gLastH, this.Renderer.gLastVX, this.Renderer.gLastVY, this.Renderer.gLastVW, this.Renderer.gLastVH, this.myCbRounded.Value)
         this.CheckUndoStates()
     }
 
@@ -415,6 +421,17 @@ class mySettingsGui {
         this.CheckUndoStates()
     }
 
+    OnRoundedChange(*) {
+        this.Renderer.myApplyBorderRegion(this.myThickUD.Value, this.Renderer.gLastW, this.Renderer.gLastH, this.Renderer.gLastVX, this.Renderer.gLastVY, this.Renderer.gLastVW, this.Renderer.gLastVH, this.myCbRounded.Value)
+        this.CheckUndoStates()
+    }
+
+    OnUndoRounded(*) {
+        this.myCbRounded.Value := this.origRounded
+        this.Renderer.myApplyBorderRegion(this.myThickUD.Value, this.Renderer.gLastW, this.Renderer.gLastH, this.Renderer.gLastVX, this.Renderer.gLastVY, this.Renderer.gLastVW, this.Renderer.gLastVH, this.myCbRounded.Value)
+        this.CheckUndoStates()
+    }
+
     HandleMouseWheel(wParam, hwnd) {
         dir := (wParam << 32 >> 48) > 0 ? 1 : -1
         if (hwnd == this.myTransEdit.Hwnd || hwnd == this.myTransUD.Hwnd) {
@@ -456,11 +473,12 @@ class mySettingsGui {
         this.myBtnUndoTrans.Enabled := (this.myTransEdit.Value != this.origTrans)
         this.myBtnUndoColor.Enabled := (this.myColorEdit.Value != this.origColor)
         this.myBtnUndoAutostart.Enabled := (this.myCbAutostart.Value != this.origAutostart)
+        this.myBtnUndoRounded.Enabled := (this.myCbRounded.Value != this.origRounded)
     }
 
     mySaveSettings(*) {
         mySaved := this.Gui.Submit()
-        this.Config.mySaveData(mySaved.BorderThickness, mySaved.Transparency, mySaved.BorderColor, mySaved.Autostart)
+        this.Config.mySaveData(mySaved.BorderThickness, mySaved.Transparency, mySaved.BorderColor, mySaved.Autostart, mySaved.UseRoundedCorners, this.Config.CornersRadius)
         Reload()
     }
 

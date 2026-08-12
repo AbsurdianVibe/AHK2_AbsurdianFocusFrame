@@ -6,25 +6,33 @@ class myConfigManager {
             IniWrite(0.5, this.IniPath, "Settings", "Transparency")
             IniWrite("", this.IniPath, "Settings", "BorderColor")
             IniWrite(0, this.IniPath, "Settings", "Autostart")
+            IniWrite(1, this.IniPath, "Settings", "UseRoundedCorners")
+            IniWrite(3, this.IniPath, "Settings", "CornersRadius")
         }
         this.BorderThickness := Integer(IniRead(this.IniPath, "Settings", "BorderThickness", 2))
         this.Transparency := Float(IniRead(this.IniPath, "Settings", "Transparency", 0.5))
         this.BorderColor := IniRead(this.IniPath, "Settings", "BorderColor", "")
         this.Autostart := Integer(IniRead(this.IniPath, "Settings", "Autostart", 0))
+        this.UseRoundedCorners := Integer(IniRead(this.IniPath, "Settings", "UseRoundedCorners", 1))
+        this.CornersRadius := Integer(IniRead(this.IniPath, "Settings", "CornersRadius", 5))
 
         if (this.BorderColor == "")
             this.BorderColor := myGetThemeColor()
     }
 
-    mySaveData(thick, trans, color, auto) {
+    mySaveData(thick, trans, color, auto, rounded, radius) {
         IniWrite(thick, this.IniPath, "Settings", "BorderThickness")
         IniWrite(trans, this.IniPath, "Settings", "Transparency")
         IniWrite(color, this.IniPath, "Settings", "BorderColor")
         IniWrite(auto, this.IniPath, "Settings", "Autostart")
+        IniWrite(rounded, this.IniPath, "Settings", "UseRoundedCorners")
+        IniWrite(radius, this.IniPath, "Settings", "CornersRadius")
         this.BorderThickness := thick
         this.Transparency := trans
         this.BorderColor := color
         this.Autostart := auto
+        this.UseRoundedCorners := rounded
+        this.CornersRadius := radius
     }
 
     mySetupAutostart() {

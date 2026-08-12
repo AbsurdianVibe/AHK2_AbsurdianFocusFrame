@@ -39,12 +39,13 @@ class myRenderEngine {
         SetTimer(this.WatchdogBound, 0)
     }
 
-    myApplyBorderRegion(g, w, h, vX, vY, vW, vH) {
+    myApplyBorderRegion(g, w, h, vX, vY, vW, vH, overrideRadius := -1) {
         if (w <= 0 || h <= 0 || vW <= 0 || vH <= 0)
             return
-        r := 3
+        currentRounded := overrideRadius != -1 ? overrideRadius : this.Config.UseRoundedCorners
+        r := currentRounded ? this.Config.CornersRadius : 0
         hRgnOuter := DllCall("CreateRoundRectRgn", "Int", 0, "Int", 0, "Int", w, "Int", h, "Int", r, "Int", r, "Ptr")
-        innerR := Max(2, r - g) ; Wymuszenie miękkiego rogu wewnętrznego przy grubych ramkach
+        innerR := (r == 0) ? 0 : Max(2, r - g) ; Wymuszenie miękkiego rogu wewnętrznego przy grubych ramkach
         hRgnInner := DllCall("CreateRoundRectRgn", "Int", g, "Int", g, "Int", w - g, "Int", h - g, "Int", innerR, "Int", innerR, "Ptr")
         DllCall("CombineRgn", "Ptr", hRgnOuter, "Ptr", hRgnOuter, "Ptr", hRgnInner, "Int", 4)
         hRgnClip := DllCall("CreateRectRgn", "Int", vX, "Int", vY, "Int", vX + vW, "Int", vY + vH, "Ptr")
