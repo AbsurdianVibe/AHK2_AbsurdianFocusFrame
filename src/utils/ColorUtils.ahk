@@ -92,8 +92,15 @@ myPickColorFromScreen(renderEngine := "") {
     KeyWait("LButton", "U")
     ToolTip("Click anywhere to pick a color.`nPress ESC or Right-Click to cancel.")
 
-    Hotkey("*LButton", (*) => "", "On")
-    Hotkey("*RButton", (*) => "", "On")
+    myScreenX := SysGet(76)
+    myScreenY := SysGet(77)
+    myScreenW := SysGet(78)
+    myScreenH := SysGet(79)
+    ShieldGui := Gui("-Caption +AlwaysOnTop +ToolWindow")
+    ShieldGui.BackColor := "Black"
+    ShieldGui.Show("NoActivate x" myScreenX " y" myScreenY " w" myScreenW " h" myScreenH)
+    WinSetTransparent(1, ShieldGui.Hwnd)
+
     CrossCursor := DllCall("LoadCursor", "Ptr", 0, "Int", 32515, "Ptr")
     CrossCursorCopy := DllCall("CopyImage", "Ptr", CrossCursor, "UInt", 2, "Int", 0, "Int", 0, "UInt", 0, "Ptr")
     DllCall("SetSystemCursor", "Ptr", CrossCursorCopy, "Int", 32512)
@@ -109,12 +116,18 @@ myPickColorFromScreen(renderEngine := "") {
             if (renderEngine)
                 try renderEngine.FocusGui.BackColor := hexC
         }
+        
         if GetKeyState("LButton", "P") {
             ToolTip()
+            ShieldGui.Hide()
+            Sleep(50)
+            MouseGetPos(&mX, &mY)
+            c := PixelGetColor(mX, mY)
+            chosenC := StrReplace(c, "0x", "")
             KeyWait("LButton", "U")
-            chosenC := hexC
             break
         }
+        
         if GetKeyState("Escape", "P") || GetKeyState("RButton", "P") {
             ToolTip()
             if GetKeyState("RButton", "P")
@@ -124,8 +137,7 @@ myPickColorFromScreen(renderEngine := "") {
         Sleep(10)
     }
 
-    Hotkey("*LButton", "Off")
-    Hotkey("*RButton", "Off")
+    ShieldGui.Destroy()
     DllCall("SystemParametersInfo", "UInt", 0x0057, "UInt", 0, "Ptr", 0, "UInt", 0)
 
     return chosenC
