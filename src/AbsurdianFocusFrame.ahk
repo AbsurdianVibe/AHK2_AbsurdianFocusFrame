@@ -12,7 +12,7 @@
 #Include "config\ConfigManager.ahk"
 #Include "core\RenderEngine.ahk"
 #Include "core\HookManager.ahk"
-#Include "core\GradientRenderer.ahk"
+#Include "ui\GradientRenderer.ahk"
 #Include "ui\SettingsGui.ahk"
 #Include "utils\ColorUtils.ahk"
 
