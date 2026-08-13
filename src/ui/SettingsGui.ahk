@@ -159,33 +159,23 @@ class mySettingsGui {
         this.indLum := this.Gui.Add("Picture", "xp-1 yp-1 w" this.indW " h" this.indH " +0x04000000 Hidden +0xE +BackgroundTrans")
         this.picLum.OnEvent("Click", (*) => this.myOnSliderInteract(this.picLum))
 
-        this.myApplyRoundedRegion(this.FrameSpec, bgW, bgH, true)
-        this.myApplyRoundedRegion(this.picSpec, this.picW, this.picH)
-        this.myApplyRoundedRegion(this.FrameSat, bgW, bgH, true)
-        this.myApplyRoundedRegion(this.picSat, this.picW, this.picH)
-        this.myApplyRoundedRegion(this.FrameLum, bgW, bgH, true)
-        this.myApplyRoundedRegion(this.picLum, this.picW, this.picH)
+        myApplyRoundedRegion(this.FrameSpec, bgW, bgH, true)
+        myApplyRoundedRegion(this.picSpec, this.picW, this.picH)
+        myApplyRoundedRegion(this.FrameSat, bgW, bgH, true)
+        myApplyRoundedRegion(this.picSat, this.picW, this.picH)
+        myApplyRoundedRegion(this.FrameLum, bgW, bgH, true)
+        myApplyRoundedRegion(this.picLum, this.picW, this.picH)
 
         this.mySyncSlidersFromHex(this.origColor != "" ? this.origColor : myGetThemeColor())
 
-        this.myApplyIndicatorRegion(this.indSpec)
-        this.myApplyIndicatorRegion(this.indSat)
-        this.myApplyIndicatorRegion(this.indLum)
+        myApplyIndicatorRegion(this.indSpec, this.indW, this.indH, this.indCutHeight)
+        myApplyIndicatorRegion(this.indSat, this.indW, this.indH, this.indCutHeight)
+        myApplyIndicatorRegion(this.indLum, this.indW, this.indH, this.indCutHeight)
         this.Gui.Show("AutoSize Hide")
         this.Gui.Show("w" this.baseCW " h" this.baseCH)
     }
 
-    myApplyRoundedRegion(ctrl, logicalW, logicalH, toBottom := false) {
-        dpiScale := A_ScreenDPI / 96
-        w := Round(logicalW * dpiScale)
-        h := Round(logicalH * dpiScale)
-        radius := Round(6 * dpiScale)
-        hRgn := DllCall("CreateRoundRectRgn", "Int", 0, "Int", 0, "Int", w, "Int", h, "Int", radius, "Int", radius, "Ptr")
-        if (!DllCall("SetWindowRgn", "Ptr", ctrl.Hwnd, "Ptr", hRgn, "Int", 1))
-            DllCall("DeleteObject", "Ptr", hRgn)
-        if (toBottom)
-            DllCall("SetWindowPos", "Ptr", ctrl.Hwnd, "Ptr", 1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0003) ; HWND_BOTTOM = 1
-    }
+
 
     mySmallButton(symbol := "↩", customTip := "Undo changes") {
         btn := this.Gui.Add("Button", "x+2 yp w22 h22", symbol)
@@ -198,19 +188,7 @@ class mySettingsGui {
         this.Gui.Add("Text", "xm-5 ym y+" this.Ygap " h1 w140 Background" . this.grayColor)
     }
 
-    myApplyIndicatorRegion(ctrl) {
-        dpiScale := A_ScreenDPI / 96
-        w := Round(this.indW * dpiScale)
-        h := Round(this.indH * dpiScale)
-        arrowH := Round(this.indCutHeight * dpiScale)
-        hRgnTop := DllCall("CreateRectRgn", "Int", 0, "Int", 0, "Int", w, "Int", arrowH, "Ptr")
-        hRgnBottom := DllCall("CreateRectRgn", "Int", 0, "Int", h - arrowH, "Int", w, "Int", h, "Ptr")
-        DllCall("CombineRgn", "Ptr", hRgnTop, "Ptr", hRgnTop, "Ptr", hRgnBottom, "Int", 2)
-        if (!DllCall("SetWindowRgn", "Ptr", ctrl.Hwnd, "Ptr", hRgnTop, "Int", 1))
-            DllCall("DeleteObject", "Ptr", hRgnTop)
-        DllCall("DeleteObject", "Ptr", hRgnBottom)
-        DllCall("SetWindowPos", "Ptr", ctrl.Hwnd, "Ptr", 0, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0003) ; HWND_TOP
-    }
+
 
     myTogglePicker() {
         this.PickerVisible := !this.PickerVisible
