@@ -30,7 +30,7 @@ class mySettingsGui {
         this.indCutHeight := 5
         this.gdiScale := 3
         this.grayColor := "d3d3d3"
-        this.HoverTipBound := this.ShowHoverTip.Bind(this)
+        this.HoverTipBound := () => myShowCenteredTooltip(this.CurrentTip)
         this.CurrentTip := ""
     }
 
@@ -509,9 +509,7 @@ class mySettingsGui {
         }
     }
 
-    ShowHoverTip() {
-        ToolTip(this.CurrentTip)
-    }
+
 
     CheckUndoStates(*) {
         this.myBtnUndoThick.Enabled := (this.myThickUD.Value != this.origThick)

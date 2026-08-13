@@ -14,6 +14,7 @@
 #Include "core\HookManager.ahk"
 #Include "ui\GradientRenderer.ahk"
 #Include "ui\SettingsGui.ahk"
+#Include "ui\UiUtils.ahk"
 #Include "utils\ColorUtils.ahk"
 
 Persistent()

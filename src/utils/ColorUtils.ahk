@@ -107,10 +107,9 @@ myPickColorFromScreen(renderEngine := "") {
     CrossCursor := DllCall("LoadCursor", "Ptr", 0, "Int", 32515, "Ptr")
     CrossCursorCopy := DllCall("CopyImage", "Ptr", CrossCursor, "UInt", 2, "Int", 0, "Int", 0, "UInt", 0, "Ptr")
     DllCall("SetSystemCursor", "Ptr", CrossCursorCopy, "Int", 32512)
-    MouseGetPos(&mX, &mY)
-    dpiScale := A_ScreenDPI / 96
 
-    SetTimer(() => (CoordMode("ToolTip", "Screen"), ToolTip("Click anywhere to pick a color.`nPress ESC or Right-Click to cancel.", mX - 80 * dpiScale, mY + 20 * dpiScale)), -100)
+
+    SetTimer(() => myShowCenteredTooltip("Click anywhere to pick a color.`nPress ESC or Right-Click to cancel."), -100)
     lastC := ""
     chosenC := ""
     while true {
