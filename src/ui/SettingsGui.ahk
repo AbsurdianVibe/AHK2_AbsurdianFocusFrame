@@ -421,6 +421,8 @@ class mySettingsGui {
     }
 
     OnColorDrop(*) {
+        SetTimer(this.HoverTipBound, 0) ; Stop asynchronous timer
+        ToolTip() ; Clear active tooltip
         res := myPickColorFromScreen(this.Renderer)
         if (res != "") {
             this.myColorEdit.Value := res

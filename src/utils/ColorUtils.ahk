@@ -59,11 +59,11 @@ myHexToHsl(hexColor) {
     r := Integer("0x" SubStr(hexColor, 1, 2)) / 255
     g := Integer("0x" SubStr(hexColor, 3, 2)) / 255
     b := Integer("0x" SubStr(hexColor, 5, 2)) / 255
-    
+
     maxC := Max(r, g, b)
     minC := Min(r, g, b)
     l := (maxC + minC) / 2
-    
+
     if (maxC == minC) {
         h := 0
         s := 0
@@ -89,8 +89,11 @@ myHexToHsl(hexColor) {
 myPickColorFromScreen(renderEngine := "") {
     CoordMode("Mouse", "Screen")
     CoordMode("Pixel", "Screen")
+
     KeyWait("LButton", "U")
-    ToolTip("Click anywhere to pick a color.`nPress ESC or Right-Click to cancel.")
+
+    Hotkey("*LButton", (*) => "", "On")
+    Hotkey("*RButton", (*) => "", "On")
 
     myScreenX := SysGet(76)
     myScreenY := SysGet(77)
@@ -104,7 +107,10 @@ myPickColorFromScreen(renderEngine := "") {
     CrossCursor := DllCall("LoadCursor", "Ptr", 0, "Int", 32515, "Ptr")
     CrossCursorCopy := DllCall("CopyImage", "Ptr", CrossCursor, "UInt", 2, "Int", 0, "Int", 0, "UInt", 0, "Ptr")
     DllCall("SetSystemCursor", "Ptr", CrossCursorCopy, "Int", 32512)
+    MouseGetPos(&mX, &mY)
+    dpiScale := A_ScreenDPI / 96
 
+    SetTimer(() => (CoordMode("ToolTip", "Screen"), ToolTip("Click anywhere to pick a color.`nPress ESC or Right-Click to cancel.", mX - 80 * dpiScale, mY + 20 * dpiScale)), -100)
     lastC := ""
     chosenC := ""
     while true {
@@ -116,7 +122,7 @@ myPickColorFromScreen(renderEngine := "") {
             if (renderEngine)
                 try renderEngine.FocusGui.BackColor := hexC
         }
-        
+
         if GetKeyState("LButton", "P") {
             ToolTip()
             ShieldGui.Hide()
@@ -127,7 +133,7 @@ myPickColorFromScreen(renderEngine := "") {
             KeyWait("LButton", "U")
             break
         }
-        
+
         if GetKeyState("Escape", "P") || GetKeyState("RButton", "P") {
             ToolTip()
             if GetKeyState("RButton", "P")
@@ -137,6 +143,8 @@ myPickColorFromScreen(renderEngine := "") {
         Sleep(10)
     }
 
+    Hotkey("*LButton", "Off")
+    Hotkey("*RButton", "Off")
     ShieldGui.Destroy()
     DllCall("SystemParametersInfo", "UInt", 0x0057, "UInt", 0, "Ptr", 0, "UInt", 0)
 
