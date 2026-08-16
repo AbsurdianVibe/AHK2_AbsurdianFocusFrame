@@ -14,6 +14,7 @@ class mySettingsController {
         this.origColor := IniRead(this.Config.IniPath, "Settings", "BorderColor", "")
         this.origAutostart := this.Config.Autostart
         this.origRounded := this.Config.UseRoundedCorners
+        this.origShowTrayIcon := this.Config.ShowTrayIcon
 
         this.GradientEngine := myGDI_Render()
         this.TooltipManager := myTooltipManager()
@@ -29,7 +30,7 @@ class mySettingsController {
         this.Renderer.IsConfigMode := true
         this.TooltipManager.myEnable()
 
-        this.View.myBuild(this.origThick, this.origTrans, this.origColor, this.origAutostart, this.origRounded, this.GradientEngine)
+        this.View.myBuild(this.origThick, this.origTrans, this.origColor, this.origAutostart, this.origRounded, this.origShowTrayIcon, this.GradientEngine)
 
         this.WireEvents()
         this.EvaluateUndoStates()
@@ -51,8 +52,10 @@ class mySettingsController {
         this.View.OnUndoColorRequest := (*) => this.OnUndoColor()
         this.View.OnUndoAutostartRequest := (*) => this.OnUndoAutostart()
         this.View.OnUndoRoundedRequest := (*) => this.OnUndoRounded()
+        this.View.OnUndoShowTrayIconRequest := (*) => this.OnUndoShowTrayIcon()
 
         this.View.OnAutostartChangeRequest := (*) => this.EvaluateUndoStates()
+        this.View.OnShowTrayIconChangeRequest := (*) => this.EvaluateUndoStates()
 
         this.View.OnMouseWheelRequest := (hwnd, dir) => this.OnMouseWheel(hwnd, dir)
 
@@ -65,6 +68,7 @@ class mySettingsController {
         this.View.myBtnUndoColor.Enabled := (this.View.myColorEdit.Value != this.origColor)
         this.View.myBtnUndoAutostart.Enabled := (this.View.myCbAutostart.Value != this.origAutostart)
         this.View.myBtnUndoRounded.Enabled := (this.View.myCbRounded.Value != this.origRounded)
+        this.View.myBtnUndoShowTrayIcon.Enabled := (this.View.myCbShowTrayIcon.Value != this.origShowTrayIcon)
     }
 
     OnThickChange(val) {
@@ -158,9 +162,15 @@ class mySettingsController {
         this.OnRoundedChange(this.origRounded)
     }
 
+    OnUndoShowTrayIcon() {
+        this.View.myCbShowTrayIcon.Value := this.origShowTrayIcon
+        this.EvaluateUndoStates()
+    }
+
     OnSave() {
         mySaved := this.View.Gui.Submit()
-        this.Config.mySaveData(mySaved.BorderThickness, mySaved.Transparency, mySaved.BorderColor, mySaved.Autostart, mySaved.UseRoundedCorners, this.Config.CornersRadius)
+        this.Config.mySaveData(mySaved.BorderThickness, mySaved.Transparency, mySaved.BorderColor, mySaved.Autostart, mySaved.UseRoundedCorners, this.Config.CornersRadius, mySaved.ShowTrayIcon)
+        A_IconHidden := !this.Config.ShowTrayIcon
         
         this.Config.mySetupAutostart()
         

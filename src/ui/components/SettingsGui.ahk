@@ -8,6 +8,7 @@ class mySettingsGui {
         this.OnUndoTransRequest := ""
         this.OnUndoColorRequest := ""
         this.OnUndoAutostartRequest := ""
+        this.OnUndoShowTrayIconRequest := ""
         this.OnUndoRoundedRequest := ""
         this.OnSaveRequest := ""
         this.OnCancelRequest := ""
@@ -18,9 +19,10 @@ class mySettingsGui {
         this.OnRoundedChangeRequest := ""
         this.OnMouseWheelRequest := ""
         this.OnAutostartChangeRequest := ""
+        this.OnShowTrayIconChangeRequest := ""
     }
 
-    myBuild(origThick, origTrans, origColor, origAutostart, origRounded, gradientEngine) {
+    myBuild(origThick, origTrans, origColor, origAutostart, origRounded, origShowTrayIcon, gradientEngine) {
         this.Gui := Gui("-MinimizeBox -MaximizeBox", "Absurdian Focus Frame")
         this.Gui.MarginX := 15
         this.Ygap := 6
@@ -86,6 +88,12 @@ class mySettingsGui {
         this.myCbAutostart.OnEvent("Click", (ctrl, *) => this.myTrigger(this.OnAutostartChangeRequest))
         this.myBtnUndoAutostart := mySmallButton(this.Gui, "↩", "Undo autostart changes")
         this.myBtnUndoAutostart.OnEvent("Click", (*) => this.myTrigger(this.OnUndoAutostartRequest))
+
+        this.myCbShowTrayIcon := this.Gui.Add("CheckBox", "xm y+" this.Ygap " h22 vShowTrayIcon", "Show Tray Icon")
+        this.myCbShowTrayIcon.Value := origShowTrayIcon
+        this.myCbShowTrayIcon.OnEvent("Click", (ctrl, *) => this.myTrigger(this.OnShowTrayIconChangeRequest))
+        this.myBtnUndoShowTrayIcon := mySmallButton(this.Gui, "↩", "Undo tray icon changes")
+        this.myBtnUndoShowTrayIcon.OnEvent("Click", (*) => this.myTrigger(this.OnUndoShowTrayIconRequest))
 
         this.myAddSeparator()
 

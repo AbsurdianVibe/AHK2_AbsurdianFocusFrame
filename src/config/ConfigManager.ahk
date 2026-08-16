@@ -7,6 +7,7 @@ class myConfigManager {
             IniWrite("", this.IniPath, "Settings", "BorderColor")
             IniWrite(1, this.IniPath, "Settings", "UseRoundedCorners")
             IniWrite(3, this.IniPath, "Settings", "CornersRadius")
+            IniWrite(0, this.IniPath, "Settings", "ShowTrayIcon")
         }
         this.BorderThickness := Integer(IniRead(this.IniPath, "Settings", "BorderThickness", 2))
         this.Transparency := Float(IniRead(this.IniPath, "Settings", "Transparency", 0.5))
@@ -14,23 +15,26 @@ class myConfigManager {
         this.Autostart := FileExist(A_Startup "\AbsurdianFocusFrame.lnk") ? 1 : 0
         this.UseRoundedCorners := Integer(IniRead(this.IniPath, "Settings", "UseRoundedCorners", 1))
         this.CornersRadius := Integer(IniRead(this.IniPath, "Settings", "CornersRadius", 5))
+        this.ShowTrayIcon := Integer(IniRead(this.IniPath, "Settings", "ShowTrayIcon", 0))
 
         if (this.BorderColor == "")
             this.BorderColor := myGetThemeColor()
     }
 
-    mySaveData(thick, trans, color, auto, rounded, radius) {
+    mySaveData(thick, trans, color, auto, rounded, radius, showTrayIcon) {
         IniWrite(thick, this.IniPath, "Settings", "BorderThickness")
         IniWrite(trans, this.IniPath, "Settings", "Transparency")
         IniWrite(color, this.IniPath, "Settings", "BorderColor")
         IniWrite(rounded, this.IniPath, "Settings", "UseRoundedCorners")
         IniWrite(radius, this.IniPath, "Settings", "CornersRadius")
+        IniWrite(showTrayIcon, this.IniPath, "Settings", "ShowTrayIcon")
         this.BorderThickness := thick
         this.Transparency := trans
         this.BorderColor := color
         this.Autostart := auto
         this.UseRoundedCorners := rounded
         this.CornersRadius := radius
+        this.ShowTrayIcon := showTrayIcon
     }
 
     mySetupAutostart() {

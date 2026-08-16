@@ -19,6 +19,7 @@ Persistent()
 
 global MainConfig := myConfigManager(A_ScriptDir "\AbsurdianFocusFrame.ini")
 MainConfig.mySetupAutostart()
+A_IconHidden := !MainConfig.ShowTrayIcon
 
 global MainRenderer := myRenderEngine(MainConfig)
 global MainHooks := myHookManager(MainRenderer, MainConfig)
