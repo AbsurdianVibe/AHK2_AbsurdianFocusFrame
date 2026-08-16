@@ -22,6 +22,7 @@ class mySettingsGui {
         this.OnMouseWheelRequest := ""
         this.OnAutostartChangeRequest := ""
         this.OnShowTrayIconChangeRequest := ""
+        this.OnExitAppRequest := ""
     }
 
     myBuild(origThick, origTrans, origColor, origAutostart, origRounded, origShowTrayIcon, gradientEngine) {
@@ -99,13 +100,19 @@ class mySettingsGui {
 
         this.myAddSeparator()
 
+        this.myBtnExit := this.Gui.Add("Button", "xm+25 y+" this.Ygap " w80", "⚠️ Exit App ⚠️")
+        this.myBtnExit.myCustomTooltip := "Completely close app"
+        this.myBtnExit.OnEvent("Click", (*) => this.myTrigger(this.OnExitAppRequest))
+
+        this.myAddSeparator()
+
         this.myBtnSave := this.Gui.Add("Button", "xm y+" this.Ygap " w60 Default", "Save")
         this.myBtnSave.OnEvent("Click", (*) => this.myTrigger(this.OnSaveRequest))
-        
+
         this.myBtnApply := this.Gui.Add("Button", "x+10 yp w60", "Apply")
         this.myBtnApply.OnEvent("Click", (*) => this.myTrigger(this.OnApplyRequest))
 
-        btnCancel := this.Gui.Add("Button", "xm y+10 w60", "Cancel")
+        btnCancel := this.Gui.Add("Button", "xm y+" this.Ygap " w60", "Cancel")
         btnCancel.OnEvent("Click", (*) => this.myTrigger(this.OnCancelRequest))
 
         this.myBtnReset := this.Gui.Add("Button", "x+10 yp w60", "Reset ↩")

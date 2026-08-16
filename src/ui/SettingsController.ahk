@@ -42,6 +42,7 @@ class mySettingsController {
         this.View.OnSaveRequest := (*) => this.OnSave()
         this.View.OnApplyRequest := (*) => this.OnApply()
         this.View.OnResetRequest := (*) => this.OnReset()
+        this.View.OnExitAppRequest := (*) => ExitApp()
 
         this.View.OnThickChangeRequest := (val) => this.OnThickChange(val)
         this.View.OnTransChangeRequest := (val) => this.OnTransChange(val)
