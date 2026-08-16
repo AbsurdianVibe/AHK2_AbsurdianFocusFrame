@@ -11,7 +11,9 @@ class mySettingsGui {
         this.OnUndoShowTrayIconRequest := ""
         this.OnUndoRoundedRequest := ""
         this.OnSaveRequest := ""
+        this.OnApplyRequest := ""
         this.OnCancelRequest := ""
+        this.OnResetRequest := ""
         this.OnThickChangeRequest := ""
         this.OnTransChangeRequest := ""
         this.OnColorChangeRequest := ""
@@ -97,10 +99,17 @@ class mySettingsGui {
 
         this.myAddSeparator()
 
-        btnSave := this.Gui.Add("Button", "xm y+" this.Ygap " w60 Default", "Save")
-        btnSave.OnEvent("Click", (*) => this.myTrigger(this.OnSaveRequest))
-        btnCancel := this.Gui.Add("Button", "x+10 yp w60", "Cancel")
+        this.myBtnSave := this.Gui.Add("Button", "xm y+" this.Ygap " w60 Default", "Save")
+        this.myBtnSave.OnEvent("Click", (*) => this.myTrigger(this.OnSaveRequest))
+        
+        this.myBtnApply := this.Gui.Add("Button", "x+10 yp w60", "Apply")
+        this.myBtnApply.OnEvent("Click", (*) => this.myTrigger(this.OnApplyRequest))
+
+        btnCancel := this.Gui.Add("Button", "xm y+10 w60", "Cancel")
         btnCancel.OnEvent("Click", (*) => this.myTrigger(this.OnCancelRequest))
+
+        this.myBtnReset := this.Gui.Add("Button", "x+10 yp w60", "Reset ↩")
+        this.myBtnReset.OnEvent("Click", (*) => this.myTrigger(this.OnResetRequest))
 
         this.Gui.Show("AutoSize Hide")
         this.Gui.GetClientPos(&_x, &_y, &baseCW, &baseCH)

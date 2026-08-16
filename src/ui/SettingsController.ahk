@@ -40,6 +40,8 @@ class mySettingsController {
         this.View.OnCloseRequest := (*) => this.OnCancel()
         this.View.OnCancelRequest := (*) => this.OnCancel()
         this.View.OnSaveRequest := (*) => this.OnSave()
+        this.View.OnApplyRequest := (*) => this.OnApply()
+        this.View.OnResetRequest := (*) => this.OnReset()
 
         this.View.OnThickChangeRequest := (val) => this.OnThickChange(val)
         this.View.OnTransChangeRequest := (val) => this.OnTransChange(val)
@@ -69,6 +71,17 @@ class mySettingsController {
         this.View.myBtnUndoAutostart.Enabled := (this.View.myCbAutostart.Value != this.origAutostart)
         this.View.myBtnUndoRounded.Enabled := (this.View.myCbRounded.Value != this.origRounded)
         this.View.myBtnUndoShowTrayIcon.Enabled := (this.View.myCbShowTrayIcon.Value != this.origShowTrayIcon)
+
+        myIsDirty := (this.View.myBtnUndoThick.Enabled 
+            || this.View.myBtnUndoTrans.Enabled
+            || this.View.myBtnUndoColor.Enabled
+            || this.View.myBtnUndoAutostart.Enabled
+            || this.View.myBtnUndoRounded.Enabled
+            || this.View.myBtnUndoShowTrayIcon.Enabled)
+
+        this.View.myBtnSave.Enabled := myIsDirty
+        this.View.myBtnApply.Enabled := myIsDirty
+        this.View.myBtnReset.Enabled := myIsDirty
     }
 
     OnThickChange(val) {
@@ -167,13 +180,35 @@ class mySettingsController {
         this.EvaluateUndoStates()
     }
 
-    OnSave() {
-        mySaved := this.View.Gui.Submit()
+    OnApply() {
+        mySaved := this.View.Gui.Submit(false)
         this.Config.mySaveData(mySaved.BorderThickness, mySaved.Transparency, mySaved.BorderColor, mySaved.Autostart, mySaved.UseRoundedCorners, this.Config.CornersRadius, mySaved.ShowTrayIcon)
         A_IconHidden := !this.Config.ShowTrayIcon
         
         this.Config.mySetupAutostart()
         
+        this.origThick := mySaved.BorderThickness
+        this.origTrans := Format("{:.2f}", mySaved.Transparency)
+        this.origColor := mySaved.BorderColor
+        this.origAutostart := mySaved.Autostart
+        this.origRounded := mySaved.UseRoundedCorners
+        this.origShowTrayIcon := mySaved.ShowTrayIcon
+        
+        this.EvaluateUndoStates()
+    }
+
+    OnReset() {
+        this.OnUndoThick()
+        this.OnUndoTrans()
+        this.OnUndoColor()
+        this.OnUndoAutostart()
+        this.OnUndoRounded()
+        this.OnUndoShowTrayIcon()
+        this.EvaluateUndoStates()
+    }
+
+    OnSave() {
+        this.OnApply()
         this.TooltipManager.myDisable()
         this.View.myCleanup()
         this.Renderer.IsConfigMode := false
