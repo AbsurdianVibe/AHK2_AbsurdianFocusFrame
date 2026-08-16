@@ -4,7 +4,7 @@
 ;@Ahk2Exe-SetCompanyName AbsurdianVibe
 ;@Ahk2Exe-SetDescription Configurable keyboard focus border for Desktop and Windows Explorer
 ;@Ahk2Exe-SetCopyright Copyright (c) 2026 AbsurdianVibe
-;@Ahk2Exe-SetVersion 1.1.6
+;@Ahk2Exe-SetVersion 1.1.7
 ;@Ahk2Exe-SetProductName Absurdian Focus Frame
 ;@Ahk2Exe-SetLanguage 0x0409 ; English (US)
 
@@ -12,9 +12,7 @@
 #Include "config\ConfigManager.ahk"
 #Include "core\RenderEngine.ahk"
 #Include "core\HookManager.ahk"
-#Include "ui\GradientRenderer.ahk"
-#Include "ui\SettingsGui.ahk"
-#Include "ui\UiUtils.ahk"
+#Include "ui\SettingsController.ahk"
 #Include "utils\ColorUtils.ahk"
 
 Persistent()
@@ -24,10 +22,19 @@ MainConfig.mySetupAutostart()
 
 global MainRenderer := myRenderEngine(MainConfig)
 global MainHooks := myHookManager(MainRenderer, MainConfig)
-global MainGuiInstance := mySettingsGui(MainConfig, MainRenderer)
+
+global MainGuiController := ""
+
+ShowSettings(*) {
+    if WinExist("Absurdian Focus Frame") {
+        WinActivate("Absurdian Focus Frame")
+        return
+    }
+    global MainGuiController := mySettingsController(MainConfig, MainRenderer)
+}
 
 A_TrayMenu.Delete()
-A_TrayMenu.Add("Settings", (*) => MainGuiInstance.myShow())
+A_TrayMenu.Add("Settings", ShowSettings)
 A_TrayMenu.Default := "Settings"
 A_TrayMenu.ClickCount := 1
 A_TrayMenu.Add("Restart", (*) => Reload())

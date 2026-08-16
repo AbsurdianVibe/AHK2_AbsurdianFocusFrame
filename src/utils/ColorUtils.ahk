@@ -9,11 +9,50 @@ myGetThemeColor() {
 }
 
 /**
- * Konwertuje kolor z modelu HSV na RGB.
- * @param {Number} h - Odcień (Hue) w zakresie 0-359.
- * @param {Number} s - Nasycenie (Saturation) w zakresie 0.0-1.0.
- * @param {Number} v - Wartość/Jasność (Value) w zakresie 0.0-1.0.
- * @returns {Map} - Zwraca mapę z kluczami r, g, b (0-255).
+ * Resolves the provided hex string. Returns the system theme color if empty.
+ * @param {String} hex - Optional hex color string (e.g. "FF0000").
+ * @returns {String} Resolved hex color string.
+ */
+myResolveColor(hex) {
+    return (hex != "") ? hex : myGetThemeColor()
+}
+
+/**
+ * Converts RGB components to perceived grayscale (Luma).
+ * @param {Number} r - Red channel (0-255).
+ * @param {Number} g - Green channel (0-255).
+ * @param {Number} b - Blue channel (0-255).
+ * @returns {Number} Grayscale value (0-255).
+ */
+myRgbToGrayscale(r, g, b) {
+    return Round((r * 0.299) + (g * 0.587) + (b * 0.114))
+}
+
+/**
+ * Lightens or darkens the given color based on the luminance ratio.
+ * @param {Number} r - Red channel.
+ * @param {Number} g - Green channel.
+ * @param {Number} b - Blue channel.
+ * @param {Number} ratio - Luminance ratio (0.0 = Black, 0.5 = Original, 1.0 = White).
+ * @returns {Map} Map with r, g, b keys (0-255).
+ */
+myMixLuminance(r, g, b, ratio) {
+    if (ratio < 0.5) {
+        p := ratio / 0.5
+        return { r: Round(r * p), g: Round(g * p), b: Round(b * p) }
+    } else {
+        p := (ratio - 0.5) / 0.5
+        return { r: Round(r + (255 - r) * p), g: Round(g + (255 - g) * p), b: Round(b + (255 - b) * p) }
+    }
+}
+
+
+/**
+ * Converts HSV color model to RGB.
+ * @param {Number} h - Hue (0-359).
+ * @param {Number} s - Saturation (0.0-1.0).
+ * @param {Number} v - Value/Brightness (0.0-1.0).
+ * @returns {Map} Map with r, g, b keys (0-255).
  */
 myHsvToRgb(h, s, v) {
     i := Floor(h / 60)
@@ -35,9 +74,9 @@ myHsvToRgb(h, s, v) {
 }
 
 /**
- * Konwertuje ciąg HEX na obiekt RGB.
- * @param {String} hex - Ciąg koloru (np. "FF0000").
- * @returns {Map} - Map {r, g, b}.
+ * Converts a HEX string to an RGB map.
+ * @param {String} hex - Hex color string (e.g. "FF0000").
+ * @returns {Map} Map with r, g, b keys (0-255).
  */
 myHexToRgb(hex) {
     return {
@@ -48,9 +87,9 @@ myHexToRgb(hex) {
 }
 
 /**
- * Konwertuje ciąg HEX na obiekt HSL dla synchronizacji suwaków.
- * @param {String} hexColor - Ciąg koloru.
- * @returns {Map} - Zwraca mapę { h, s, l }.
+ * Converts a HEX string to an HSL map for slider synchronization.
+ * @param {String} hexColor - Hex color string.
+ * @returns {Map} Map with h, s, l keys.
  */
 myHexToHsl(hexColor) {
     hexColor := StrReplace(hexColor, "#")

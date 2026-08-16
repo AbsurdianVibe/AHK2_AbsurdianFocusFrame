@@ -1,4 +1,4 @@
-class myGradientRenderer {
+class myGDI_Render {
     __New() {
         if !DllCall("GetModuleHandle", "Str", "gdiplus", "Ptr")
             DllCall("LoadLibrary", "Str", "gdiplus")
@@ -27,7 +27,7 @@ class myGradientRenderer {
         hReturned := SendMessage(0x172, 0, hBM, ctrlHwnd) ; STM_SETIMAGE
         if (hReturned)
             DllCall("DeleteObject", "Ptr", hReturned)
-        
+
         if (hBM) {
             hNow := SendMessage(0x173, 0, 0, ctrlHwnd) ; STM_GETIMAGE
             if (hNow && hNow != hBM)
@@ -59,18 +59,11 @@ class myGradientRenderer {
     }
 
     myRenderLuminance(w, h, r, g, b) {
-        return this.myRenderHorizontalGradient(w, h, (x, width) => (
-            i := 1.0 - (x / (width - 1)),
-            (i < 0.5) ? (
-                p := i / 0.5, { r: Round(255 + (r - 255) * p), g: Round(255 + (g - 255) * p), b: Round(255 + (b - 255) * p) }
-            ) : (
-                p := (i - 0.5) / 0.5, { r: Round(r * (1 - p)), g: Round(g * (1 - p)), b: Round(b * (1 - p)) }
-            )
-        ))
+        return this.myRenderHorizontalGradient(w, h, (x, width) => myMixLuminance(r, g, b, x / (width - 1)))
     }
 
     myRenderSaturation(w, h, r, g, b) {
-        szary := Round((r * 0.299) + (g * 0.587) + (b * 0.114))
+        szary := myRgbToGrayscale(r, g, b)
         return this.myRenderHorizontalGradient(w, h, (x, width) => (
             i := 1.0 - (x / (width - 1)), { r: Round(r + (szary - r) * i), g: Round(g + (szary - g) * i), b: Round(b + (szary - b) * i) }
         ))
