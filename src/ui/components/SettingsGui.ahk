@@ -32,6 +32,7 @@ class mySettingsGui {
         this.Gui.MarginY := this.Ygap
 
         this.Gui.OnEvent("Close", (*) => this.myTrigger(this.OnCloseRequest))
+        this.Gui.OnEvent("Escape", (*) => this.myTrigger(this.OnCloseRequest))
 
         myBtnInfo := this.Gui.Add("Button", "xm y" this.Ygap, "ℹ️ About program")
         myBtnInfo.OnEvent("Click", (*) => this.ShowInfoDialog())
@@ -173,6 +174,7 @@ class mySettingsGui {
 
         infoClose := (*) => (this.Gui.Opt("-Disabled"), infoGui.Destroy())
         infoGui.OnEvent("Close", infoClose)
+        infoGui.OnEvent("Escape", infoClose)
 
         infoGui.MarginX := 20
         infoGui.MarginY := 20
@@ -182,5 +184,6 @@ class mySettingsGui {
         btnOk := infoGui.Add("Button", "w80 x120 y+20 Default", "OK")
         btnOk.OnEvent("Click", infoClose)
         infoGui.Show()
+        btnOk.Focus()
     }
 }
