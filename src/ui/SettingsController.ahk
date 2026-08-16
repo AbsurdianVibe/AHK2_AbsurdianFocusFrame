@@ -20,6 +20,12 @@ class mySettingsController {
 
         this.View := mySettingsGui()
 
+        try {
+            if hwnd := WinExist("ahk_class WorkerW") || WinExist("ahk_class Progman")
+                WinActivate("ahk_id " hwnd)
+            Sleep(100)
+        }
+
         this.Renderer.IsConfigMode := true
         this.TooltipManager.myEnable()
 
@@ -155,7 +161,12 @@ class mySettingsController {
     OnSave() {
         mySaved := this.View.Gui.Submit()
         this.Config.mySaveData(mySaved.BorderThickness, mySaved.Transparency, mySaved.BorderColor, mySaved.Autostart, mySaved.UseRoundedCorners, this.Config.CornersRadius)
-        Reload()
+        
+        this.Config.mySetupAutostart()
+        
+        this.TooltipManager.myDisable()
+        this.View.myCleanup()
+        this.Renderer.IsConfigMode := false
     }
 
     OnCancel() {

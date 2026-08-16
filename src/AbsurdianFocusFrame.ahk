@@ -39,3 +39,14 @@ A_TrayMenu.Default := "Settings"
 A_TrayMenu.ClickCount := 1
 A_TrayMenu.Add("Restart", (*) => Reload())
 A_TrayMenu.Add("Exit", (*) => ExitApp())
+
+myIsAutostartMode := false
+for myArg in A_Args {
+    if (myArg == "myAutostart") {
+        myIsAutostartMode := true
+        break
+    }
+}
+if (!myIsAutostartMode) {
+    ShowSettings()
+}
